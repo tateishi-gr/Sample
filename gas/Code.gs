@@ -5,6 +5,8 @@
  *   - 見積書: 1 見積 = 1 行（ヘッダー情報）
  *   - 明細  : 1 明細 = 1 行（見積ID で見積書に紐づく）
  *
+ * 列は見出し名で読み書きするので、シート上で列を並べ替えたり独自の列を足したりしても動く。
+ *
  * スクリプトプロパティ（任意）
  *   SPREADSHEET_ID  : データ保存先。未設定ならコンテナバインドのスプレッドシートを使う
  *   DRIVE_FOLDER_ID : 設定すると登録時に元ファイルを Drive に保存する
@@ -13,10 +15,55 @@
 const SHEET_QUOTES = '見積書';
 const SHEET_ITEMS = '明細';
 
-const QUOTE_HEADERS = ['見積ID', '登録日時', '見積日', '取引先', '件名', '合計金額', '取込元', 'ファイル名', 'ファイルURL', 'メモ'];
-const ITEM_HEADERS = ['明細ID', '見積ID', '行No', '品名', '仕様・型番', '数量', '単位', '単価', '金額', '備考'];
+// [key, 見出し]
+const QUOTE_COLUMNS = [
+  ['quoteId', '見積ID'],
+  ['registeredAt', '登録日時'],
+  ['updatedAt', '更新日時'],
+  ['status', 'ステータス'],
+  ['quoteNo', '見積番号'],
+  ['quoteDate', '見積日'],
+  ['validUntil', '有効期限'],
+  ['vendor', '取引先'],
+  ['vendorContact', '取引先担当者'],
+  ['subject', '件名'],
+  ['deliveryDate', '納期'],
+  ['deliveryPlace', '納入場所'],
+  ['paymentTerms', '支払条件'],
+  ['staff', '自社担当者'],
+  ['subtotal', '小計（税抜）'],
+  ['tax', '消費税'],
+  ['total', '合計（税込）'],
+  ['sourceType', '取込元'],
+  ['fileName', 'ファイル名'],
+  ['fileUrl', 'ファイルURL'],
+  ['memo', 'メモ'],
+];
+const ITEM_COLUMNS = [
+  ['itemId', '明細ID'],
+  ['quoteId', '見積ID'],
+  ['lineNo', '行No'],
+  ['name', '品名'],
+  ['spec', '仕様・型番'],
+  ['qty', '数量'],
+  ['unit', '単位'],
+  ['unitPrice', '単価'],
+  ['amount', '金額'],
+  ['note', '備考'],
+];
+// Old header names from earlier versions, renamed by setup().
+const COLUMN_ALIASES = { '合計金額': '合計（税込）' };
 
+// Header fields the user can edit from the UI.
+const EDITABLE_KEYS = ['status', 'quoteNo', 'quoteDate', 'validUntil', 'vendor', 'vendorContact', 'subject',
+  'deliveryDate', 'deliveryPlace', 'paymentTerms', 'staff', 'memo'];
+const DATE_KEYS = ['quoteDate', 'validUntil'];
+const DATETIME_KEYS = ['registeredAt', 'updatedAt'];
+const NUMBER_KEYS = ['subtotal', 'tax', 'total', 'lineNo', 'qty', 'unitPrice', 'amount'];
+
+const STATUSES = ['検討中', '採用', '不採用', '保留'];
 const SOURCE_TYPES = ['excel', 'pdf', 'handwritten', 'manual'];
+const TAX_RATE = 0.1;
 const MAX_SEARCH_RESULTS = 500;
 
 // ---------------------------------------------------------------------------
@@ -33,25 +80,34 @@ function doGet() {
 // Setup
 // ---------------------------------------------------------------------------
 
-/** Run once from the editor: creates both sheets and fills sample data if empty. */
+/**
+ * Run from the editor. Creates both sheets (or adds missing columns to existing ones)
+ * and fills sample data if there is no quote yet.
+ */
 function setup() {
   const ss = getSpreadsheet_();
-  const quotes = ensureSheet_(ss, SHEET_QUOTES, QUOTE_HEADERS);
-  ensureSheet_(ss, SHEET_ITEMS, ITEM_HEADERS);
-  if (quotes.getLastRow() <= 1) {
+  ensureSheet_(ss, SHEET_QUOTES, QUOTE_COLUMNS);
+  ensureSheet_(ss, SHEET_ITEMS, ITEM_COLUMNS);
+  if (ss.getSheetByName(SHEET_QUOTES).getLastRow() <= 1) {
     SAMPLE_QUOTES.forEach(q => registerQuote(q));
   }
 }
 
-function ensureSheet_(ss, name, headers) {
+function ensureSheet_(ss, name, columns) {
   let sheet = ss.getSheetByName(name);
   if (!sheet) sheet = ss.insertSheet(name);
+  const labels = columns.map(c => c[1]);
   if (sheet.getLastRow() === 0) {
-    sheet.appendRow(headers);
+    sheet.appendRow(labels);
     sheet.setFrozenRows(1);
-    sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#eef2f7');
+  } else {
+    const range = sheet.getRange(1, 1, 1, sheet.getLastColumn());
+    const current = range.getValues()[0].map(h => COLUMN_ALIASES[h] || String(h));
+    range.setValues([current]);
+    const missing = labels.filter(l => current.indexOf(l) < 0);
+    if (missing.length) sheet.getRange(1, current.length + 1, 1, missing.length).setValues([missing]);
   }
-  return sheet;
+  sheet.getRange(1, 1, 1, sheet.getLastColumn()).setFontWeight('bold').setBackground('#eef2f7');
 }
 
 function getSpreadsheet_() {
@@ -65,73 +121,81 @@ function getSpreadsheet_() {
 // API (called from the client via google.script.run)
 // ---------------------------------------------------------------------------
 
-/** Initial data for the UI: vendor list and counts. */
+/** Initial data for the UI: choices for selects and counts. */
 function getInitData() {
-  const quotes = readQuotes_();
-  const vendors = Array.from(new Set(quotes.map(q => q.vendor).filter(Boolean))).sort();
+  const quotes = readTable_(openTable_(SHEET_QUOTES, QUOTE_COLUMNS));
+  const uniq = key => Array.from(new Set(quotes.map(q => q[key]).filter(Boolean))).sort();
   return {
-    vendors: vendors,
+    vendors: uniq('vendor'),
+    staff: uniq('staff'),
+    statuses: STATUSES,
     quoteCount: quotes.length,
     itemCount: Math.max(sheet_(SHEET_ITEMS).getLastRow() - 1, 0),
   };
 }
 
 /**
- * Registers one quote and its line items.
+ * Registers one quote (header + line items).
  * @param {{header: Object, items: Object[], file?: {name: string, mimeType: string, base64: string}}} payload
  * @return {{quoteId: string, itemCount: number}}
  */
 function registerQuote(payload) {
-  const header = payload.header || {};
-  const items = (payload.items || []).filter(it => String(it.name || '').trim() !== '');
-  if (!String(header.vendor || '').trim()) throw new Error('取引先は必須です。');
-  if (items.length === 0) throw new Error('明細が 1 行もありません。');
-
-  const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
-  try {
+  const built = buildQuote_(payload);
+  return withLock_(() => {
     const quoteId = 'Q' + Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyyMMddHHmmss') + '-' +
       Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    const fileUrl = payload.file ? saveFile_(payload.file, quoteId) : '';
-
-    const rows = items.map((it, i) => {
-      const qty = toNumber_(it.qty);
-      const price = toNumber_(it.unitPrice);
-      const amount = it.amount !== '' && it.amount != null ? toNumber_(it.amount) : qty * price;
-      return [quoteId + '-' + (i + 1), quoteId, i + 1, String(it.name).trim(), it.spec || '', qty, it.unit || '', price, amount, it.note || ''];
+    const h = payload.header || {};
+    const now = new Date();
+    const header = Object.assign(built.header, {
+      quoteId: quoteId,
+      registeredAt: now,
+      updatedAt: now,
+      sourceType: SOURCE_TYPES.indexOf(h.sourceType) >= 0 ? h.sourceType : 'manual',
+      fileName: h.fileName || (payload.file && payload.file.name) || '',
+      fileUrl: payload.file ? saveFile_(payload.file, quoteId) : '',
     });
-    const total = rows.reduce((sum, r) => sum + (Number(r[8]) || 0), 0);
+    const quotes = openTable_(SHEET_QUOTES, QUOTE_COLUMNS);
+    quotes.sheet.appendRow(toRow_(quotes, header));
+    appendItems_(quoteId, built.items);
+    return { quoteId: quoteId, itemCount: built.items.length };
+  });
+}
 
-    sheet_(SHEET_QUOTES).appendRow([
-      quoteId,
-      new Date(),
-      header.quoteDate ? new Date(header.quoteDate) : '',
-      String(header.vendor).trim(),
-      header.subject || '',
-      total,
-      SOURCE_TYPES.indexOf(header.sourceType) >= 0 ? header.sourceType : 'manual',
-      header.fileName || (payload.file && payload.file.name) || '',
-      fileUrl,
-      header.memo || '',
-    ]);
-    const itemSheet = sheet_(SHEET_ITEMS);
-    itemSheet.getRange(itemSheet.getLastRow() + 1, 1, rows.length, ITEM_HEADERS.length).setValues(rows);
+/** Replaces a quote's header fields and line items. File and source type are kept. */
+function updateQuote(quoteId, payload) {
+  const built = buildQuote_(payload);
+  return withLock_(() => {
+    const quotes = openTable_(SHEET_QUOTES, QUOTE_COLUMNS);
+    const row = findRow_(quotes, quoteId);
+    const header = Object.assign(built.header, { updatedAt: new Date() });
+    quotes.sheet.getRange(row._row, 1, 1, quotes.width).setValues([toRow_(quotes, header, row._raw)]);
+    deleteRowsWhere_(openTable_(SHEET_ITEMS, ITEM_COLUMNS), 'quoteId', quoteId);
+    appendItems_(quoteId, built.items);
+    return { quoteId: quoteId, itemCount: built.items.length };
+  });
+}
 
-    return { quoteId: quoteId, itemCount: rows.length };
-  } finally {
-    lock.releaseLock();
-  }
+/** Changes only the status of a quote. */
+function updateQuoteStatus(quoteId, status) {
+  if (STATUSES.indexOf(status) < 0) throw new Error('不正なステータスです: ' + status);
+  return withLock_(() => {
+    const quotes = openTable_(SHEET_QUOTES, QUOTE_COLUMNS);
+    const row = findRow_(quotes, quoteId);
+    quotes.sheet.getRange(row._row, quotes.index.status + 1).setValue(status);
+    quotes.sheet.getRange(row._row, quotes.index.updatedAt + 1).setValue(new Date());
+    return true;
+  });
 }
 
 /**
  * Searches line items joined with their quote header.
- * @param {{keyword?: string, vendor?: string, dateFrom?: string, dateTo?: string,
+ * @param {{keyword?: string, vendor?: string, status?: string, dateFrom?: string, dateTo?: string,
  *          priceMin?: number, priceMax?: number, sourceType?: string}} q
  */
 function searchItems(q) {
   q = q || {};
   const quotes = {};
-  readQuotes_().forEach(h => { quotes[h.quoteId] = h; });
+  readTable_(openTable_(SHEET_QUOTES, QUOTE_COLUMNS)).forEach(h => { quotes[h.quoteId] = h; });
 
   const terms = normalize_(q.keyword || '').split(/\s+/).filter(Boolean);
   const priceMin = q.priceMin === '' || q.priceMin == null ? null : Number(q.priceMin);
@@ -139,23 +203,25 @@ function searchItems(q) {
 
   const results = [];
   let total = 0;
-  readItems_().forEach(it => {
+  readTable_(openTable_(SHEET_ITEMS, ITEM_COLUMNS)).forEach(it => {
     const h = quotes[it.quoteId];
     if (!h) return;
     if (q.vendor && h.vendor !== q.vendor) return;
+    if (q.status && h.status !== q.status) return;
     if (q.sourceType && h.sourceType !== q.sourceType) return;
     if (q.dateFrom && (!h.quoteDate || h.quoteDate < q.dateFrom)) return;
     if (q.dateTo && (!h.quoteDate || h.quoteDate > q.dateTo)) return;
     if (priceMin !== null && it.unitPrice < priceMin) return;
     if (priceMax !== null && it.unitPrice > priceMax) return;
     if (terms.length) {
-      const haystack = normalize_([it.name, it.spec, it.note, h.vendor, h.subject].join(' '));
+      const haystack = normalize_([it.name, it.spec, it.note, h.vendor, h.subject, h.quoteNo].join(' '));
       if (!terms.every(t => haystack.indexOf(t) >= 0)) return;
     }
     total++;
     if (results.length < MAX_SEARCH_RESULTS) {
-      results.push(Object.assign({}, it, {
-        vendor: h.vendor, subject: h.subject, quoteDate: h.quoteDate, sourceType: h.sourceType,
+      results.push(Object.assign(strip_(it), {
+        vendor: h.vendor, subject: h.subject, quoteNo: h.quoteNo, quoteDate: h.quoteDate,
+        status: h.status, sourceType: h.sourceType,
       }));
     }
   });
@@ -163,34 +229,68 @@ function searchItems(q) {
   return { total: total, items: results };
 }
 
-/** All quote headers, newest first. */
+/**
+ * All quote headers, newest quote date first.
+ * Filtering for the 見積管理 screen is done on the client.
+ */
 function listQuotes() {
-  return readQuotes_().sort((a, b) => b.registeredAt.localeCompare(a.registeredAt));
+  return readTable_(openTable_(SHEET_QUOTES, QUOTE_COLUMNS)).map(strip_).sort((a, b) =>
+    (b.quoteDate || '').localeCompare(a.quoteDate || '') || b.registeredAt.localeCompare(a.registeredAt));
 }
 
 /** One quote with its line items. */
 function getQuote(quoteId) {
-  const header = readQuotes_().filter(h => h.quoteId === quoteId)[0];
-  if (!header) throw new Error('見積が見つかりません: ' + quoteId);
-  const items = readItems_().filter(it => it.quoteId === quoteId).sort((a, b) => a.lineNo - b.lineNo);
-  return { header: header, items: items };
+  const header = findRow_(openTable_(SHEET_QUOTES, QUOTE_COLUMNS), quoteId);
+  const items = readTable_(openTable_(SHEET_ITEMS, ITEM_COLUMNS))
+    .filter(it => it.quoteId === quoteId)
+    .sort((a, b) => a.lineNo - b.lineNo)
+    .map(strip_);
+  return { header: strip_(header), items: items };
 }
 
 /** Deletes a quote and its line items. */
 function deleteQuote(quoteId) {
-  const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
-  try {
-    deleteRowsWhere_(sheet_(SHEET_ITEMS), 1, quoteId);
-    deleteRowsWhere_(sheet_(SHEET_QUOTES), 0, quoteId);
+  return withLock_(() => {
+    deleteRowsWhere_(openTable_(SHEET_ITEMS, ITEM_COLUMNS), 'quoteId', quoteId);
+    deleteRowsWhere_(openTable_(SHEET_QUOTES, QUOTE_COLUMNS), 'quoteId', quoteId);
     return true;
-  } finally {
-    lock.releaseLock();
-  }
+  });
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Quote building
+// ---------------------------------------------------------------------------
+
+/** Validates the payload and computes amounts. Tax defaults to 10% of the subtotal. */
+function buildQuote_(payload) {
+  const h = payload.header || {};
+  const items = (payload.items || []).filter(it => String(it.name || '').trim() !== '').map((it, i) => {
+    const qty = toNumber_(it.qty);
+    const unitPrice = toNumber_(it.unitPrice);
+    const amount = it.amount !== '' && it.amount != null ? toNumber_(it.amount) : qty * unitPrice;
+    return { lineNo: i + 1, name: String(it.name).trim(), spec: it.spec || '', qty: qty, unit: it.unit || '',
+      unitPrice: unitPrice, amount: amount, note: it.note || '' };
+  });
+  if (!String(h.vendor || '').trim()) throw new Error('取引先は必須です。');
+  if (items.length === 0) throw new Error('明細が 1 行もありません。');
+
+  const header = {};
+  EDITABLE_KEYS.forEach(k => { header[k] = h[k] == null ? '' : String(h[k]).trim(); });
+  if (STATUSES.indexOf(header.status) < 0) header.status = STATUSES[0];
+  header.subtotal = items.reduce((sum, it) => sum + it.amount, 0);
+  header.tax = h.tax !== '' && h.tax != null ? toNumber_(h.tax) : Math.floor(header.subtotal * TAX_RATE);
+  header.total = header.subtotal + header.tax;
+  return { header: header, items: items };
+}
+
+function appendItems_(quoteId, items) {
+  const t = openTable_(SHEET_ITEMS, ITEM_COLUMNS);
+  const rows = items.map(it => toRow_(t, Object.assign({ itemId: quoteId + '-' + it.lineNo, quoteId: quoteId }, it)));
+  t.sheet.getRange(t.sheet.getLastRow() + 1, 1, rows.length, t.width).setValues(rows);
+}
+
+// ---------------------------------------------------------------------------
+// Sheet access by header name
 // ---------------------------------------------------------------------------
 
 function sheet_(name) {
@@ -199,47 +299,91 @@ function sheet_(name) {
   return sheet;
 }
 
-function readRows_(name, width) {
+/** @return {{sheet: Sheet, width: number, index: Object<string, number>}} index is 0-based column per key */
+function openTable_(name, columns) {
   const sheet = sheet_(name);
-  const last = sheet.getLastRow();
+  const width = sheet.getLastColumn();
+  const headers = sheet.getRange(1, 1, 1, width).getValues()[0].map(String);
+  const index = {};
+  columns.forEach(([key, label]) => {
+    const i = headers.indexOf(label);
+    if (i < 0) throw new Error('シート「' + name + '」に列「' + label + '」がありません。setup() を実行してください。');
+    index[key] = i;
+  });
+  return { sheet: sheet, width: width, index: index };
+}
+
+/** Rows as objects. _row is the 1-based sheet row, _raw the original values. */
+function readTable_(t) {
+  const last = t.sheet.getLastRow();
   if (last <= 1) return [];
-  return sheet.getRange(2, 1, last - 1, width).getValues();
+  return t.sheet.getRange(2, 1, last - 1, t.width).getValues()
+    .map((raw, i) => {
+      const obj = { _row: i + 2, _raw: raw };
+      Object.keys(t.index).forEach(k => { obj[k] = fromCell_(k, raw[t.index[k]]); });
+      return obj;
+    })
+    .filter(o => o[Object.keys(t.index)[0]]);
 }
 
-function readQuotes_() {
-  return readRows_(SHEET_QUOTES, QUOTE_HEADERS.length).filter(r => r[0]).map(r => ({
-    quoteId: String(r[0]),
-    registeredAt: formatDate_(r[1], 'yyyy-MM-dd HH:mm'),
-    quoteDate: formatDate_(r[2], 'yyyy-MM-dd'),
-    vendor: String(r[3]),
-    subject: String(r[4]),
-    total: Number(r[5]) || 0,
-    sourceType: String(r[6]),
-    fileName: String(r[7]),
-    fileUrl: String(r[8]),
-    memo: String(r[9]),
-  }));
+/** Builds a sheet row from an object, keeping values of columns the object doesn't cover. */
+function toRow_(t, obj, base) {
+  const row = base ? base.slice() : new Array(t.width).fill('');
+  Object.keys(t.index).forEach(k => { if (k in obj) row[t.index[k]] = toCell_(k, obj[k]); });
+  return row;
 }
 
-function readItems_() {
-  return readRows_(SHEET_ITEMS, ITEM_HEADERS.length).filter(r => r[0]).map(r => ({
-    itemId: String(r[0]),
-    quoteId: String(r[1]),
-    lineNo: Number(r[2]) || 0,
-    name: String(r[3]),
-    spec: String(r[4]),
-    qty: Number(r[5]) || 0,
-    unit: String(r[6]),
-    unitPrice: Number(r[7]) || 0,
-    amount: Number(r[8]) || 0,
-    note: String(r[9]),
-  }));
+// _raw may contain Date objects, which google.script.run cannot return.
+function strip_(obj) {
+  const copy = Object.assign({}, obj);
+  delete copy._row;
+  delete copy._raw;
+  return copy;
 }
 
-function deleteRowsWhere_(sheet, colIndex, value) {
-  const values = sheet.getDataRange().getValues();
+function findRow_(t, quoteId) {
+  const row = readTable_(t).filter(r => r.quoteId === quoteId)[0];
+  if (!row) throw new Error('見積が見つかりません: ' + quoteId);
+  return row;
+}
+
+function deleteRowsWhere_(t, key, value) {
+  const col = t.index[key];
+  const values = t.sheet.getDataRange().getValues();
   for (let i = values.length - 1; i >= 1; i--) {
-    if (String(values[i][colIndex]) === value) sheet.deleteRow(i + 1);
+    if (String(values[i][col]) === value) t.sheet.deleteRow(i + 1);
+  }
+}
+
+// google.script.run cannot return Date objects, so dates go to the client as strings.
+function fromCell_(key, v) {
+  if (NUMBER_KEYS.indexOf(key) >= 0) return Number(v) || 0;
+  if (key === 'status') return String(v || '') || STATUSES[0]; // rows from before statuses existed
+  if (v instanceof Date) {
+    return Utilities.formatDate(v, 'Asia/Tokyo', DATETIME_KEYS.indexOf(key) >= 0 ? 'yyyy-MM-dd HH:mm' : 'yyyy-MM-dd');
+  }
+  return v == null ? '' : String(v);
+}
+
+function toCell_(key, v) {
+  if (DATE_KEYS.indexOf(key) >= 0) {
+    const m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : (v || '');
+  }
+  return v == null ? '' : v;
+}
+
+// ---------------------------------------------------------------------------
+// Misc helpers
+// ---------------------------------------------------------------------------
+
+function withLock_(fn) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    return fn();
+  } finally {
+    lock.releaseLock();
   }
 }
 
@@ -248,12 +392,6 @@ function saveFile_(file, quoteId) {
   if (!folderId) return '';
   const blob = Utilities.newBlob(Utilities.base64Decode(file.base64), file.mimeType, quoteId + '_' + file.name);
   return DriveApp.getFolderById(folderId).createFile(blob).getUrl();
-}
-
-// google.script.run cannot return Date objects, so dates go to the client as strings.
-function formatDate_(v, pattern) {
-  if (v instanceof Date) return Utilities.formatDate(v, 'Asia/Tokyo', pattern);
-  return v ? String(v) : '';
 }
 
 function toNumber_(v) {
@@ -272,7 +410,9 @@ function normalize_(s) {
 
 const SAMPLE_QUOTES = [
   {
-    header: { quoteDate: '2026-07-03', vendor: '東和電機株式会社', subject: '本社3F 照明LED化工事', sourceType: 'excel', fileName: '見積_東和電機_20260703.xlsx' },
+    header: { status: '採用', quoteNo: 'TW-2026-0412', quoteDate: '2026-07-03', validUntil: '2026-08-02', vendor: '東和電機株式会社', vendorContact: '佐藤',
+      subject: '本社3F 照明LED化工事', deliveryDate: '受注後3週間', deliveryPlace: '本社3F', paymentTerms: '月末締め翌月末払い', staff: '田中',
+      sourceType: 'excel', fileName: '見積_東和電機_20260703.xlsx' },
     items: [
       { name: 'LEDベースライト', spec: 'LDL40 昼白色 4000lm', qty: 48, unit: '台', unitPrice: 12800 },
       { name: '既設照明器具撤去', spec: '40W×2灯', qty: 48, unit: '台', unitPrice: 1500 },
@@ -281,7 +421,9 @@ const SAMPLE_QUOTES = [
     ],
   },
   {
-    header: { quoteDate: '2026-07-18', vendor: 'ネットワークス山田', subject: '会議室 LAN 増設', sourceType: 'pdf', fileName: 'Q-2026-0718.pdf' },
+    header: { status: '不採用', quoteNo: 'Q-2026-0718', quoteDate: '2026-07-18', validUntil: '2026-08-17', vendor: 'ネットワークス山田', vendorContact: '山田',
+      subject: '会議室 LAN 増設', deliveryDate: '2026-08-末', deliveryPlace: '本社2F 会議室', paymentTerms: '検収後30日', staff: '鈴木',
+      sourceType: 'pdf', fileName: 'Q-2026-0718.pdf', memo: '他社相見積の結果、不採用' },
     items: [
       { name: 'LANケーブル', spec: 'Cat6A 305m巻', qty: 2, unit: '巻', unitPrice: 38000 },
       { name: 'スイッチングハブ', spec: '24ポート PoE+ GS1900-24HP', qty: 1, unit: '台', unitPrice: 64500 },
@@ -290,7 +432,9 @@ const SAMPLE_QUOTES = [
     ],
   },
   {
-    header: { quoteDate: '2026-08-05', vendor: '東和電機株式会社', subject: '倉庫 照明・コンセント増設', sourceType: 'pdf', fileName: '見積書_倉庫.pdf' },
+    header: { status: '検討中', quoteNo: 'TW-2026-0533', quoteDate: '2026-08-05', validUntil: '2026-09-04', vendor: '東和電機株式会社', vendorContact: '佐藤',
+      subject: '倉庫 照明・コンセント増設', deliveryDate: '受注後1ヶ月', deliveryPlace: '第2倉庫', paymentTerms: '月末締め翌月末払い', staff: '田中',
+      sourceType: 'pdf', fileName: '見積書_倉庫.pdf' },
     items: [
       { name: 'LED高天井照明', spec: '150W 水銀灯400W相当', qty: 16, unit: '台', unitPrice: 29800 },
       { name: 'コンセント増設', spec: '2口 接地付', qty: 10, unit: '箇所', unitPrice: 8500 },
@@ -298,7 +442,9 @@ const SAMPLE_QUOTES = [
     ],
   },
   {
-    header: { quoteDate: '2026-08-22', vendor: '丸山建材', subject: '事務所 内装補修', sourceType: 'handwritten', fileName: 'memo_0822.jpg', memo: '現地打合せ時の手書きメモより' },
+    header: { status: '保留', quoteDate: '2026-08-22', validUntil: '2026-10-03', vendor: '丸山建材', vendorContact: '丸山',
+      subject: '事務所 内装補修', deliveryPlace: '本社1F 事務所', paymentTerms: '現金', staff: '鈴木',
+      sourceType: 'handwritten', fileName: 'memo_0822.jpg', memo: '現地打合せ時の手書きメモより' },
     items: [
       { name: '石膏ボード', spec: '12.5mm 910×1820', qty: 20, unit: '枚', unitPrice: 980 },
       { name: 'クロス張替', spec: '量産品', qty: 45, unit: 'm2', unitPrice: 1200 },
@@ -306,7 +452,9 @@ const SAMPLE_QUOTES = [
     ],
   },
   {
-    header: { quoteDate: '2026-09-10', vendor: 'ネットワークス山田', subject: '無線LAN 更新', sourceType: 'excel', fileName: '無線LAN更新_見積.xlsx' },
+    header: { status: '検討中', quoteNo: 'Q-2026-0910', quoteDate: '2026-09-10', validUntil: '2026-10-10', vendor: 'ネットワークス山田', vendorContact: '山田',
+      subject: '無線LAN 更新', deliveryDate: '2026-11-中旬', deliveryPlace: '本社 全フロア', paymentTerms: '検収後30日', staff: '田中',
+      sourceType: 'excel', fileName: '無線LAN更新_見積.xlsx' },
     items: [
       { name: '無線アクセスポイント', spec: 'Wi-Fi 6E WAX630E', qty: 6, unit: '台', unitPrice: 52000 },
       { name: 'LANケーブル', spec: 'Cat6 20m', qty: 6, unit: '本', unitPrice: 2200 },

@@ -10,21 +10,22 @@
 <style>
   :root {
     --bg: #f5f6f8; --panel: #fff; --text: #1d2330; --muted: #6b7384; --line: #e2e5eb;
-    --accent: #2f6fde; --accent-weak: #e8f0fd; --danger: #d64545; --warn-bg: #fff5d6; --mark: #ffe58a;
+    --accent: #2f6fde; --accent-weak: #e8f0fd; --danger: #d64545; --danger-weak: #fdeaea; --warn-bg: #fff5d6; --mark: #ffe58a;
     --excel: #1f8a4c; --pdf: #c9392f; --hand: #8a5cd1; --manual: #6b7384;
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text);
     font: 14px/1.6 "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", Meiryo, sans-serif; }
   header { background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 10; }
-  .bar { max-width: 1200px; margin: 0 auto; padding: 12px 16px 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; }
+  .bar { max-width: 1280px; margin: 0 auto; padding: 12px 16px 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; }
   h1 { font-size: 17px; margin: 0; }
+  h2 { font-size: 15px; margin: 0 0 12px; }
   .stats { color: var(--muted); font-size: 12px; margin-left: auto; }
   .mode { font-size: 11px; background: var(--warn-bg); padding: 2px 8px; border-radius: 10px; margin-left: 8px; }
-  nav { max-width: 1200px; margin: 0 auto; padding: 0 16px; display: flex; gap: 4px; }
+  nav { max-width: 1280px; margin: 0 auto; padding: 0 16px; display: flex; gap: 4px; }
   nav button { border: 0; background: none; padding: 10px 14px; font: inherit; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; }
   nav button.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
-  main { max-width: 1200px; margin: 0 auto; padding: 16px; }
+  main { max-width: 1280px; margin: 0 auto; padding: 16px; }
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; margin-bottom: 16px; }
   .hidden { display: none !important; }
   label.f { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--muted); }
@@ -33,14 +34,15 @@
   .btn { font: inherit; border: 1px solid var(--line); background: #fff; padding: 7px 14px; border-radius: 6px; cursor: pointer; }
   .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
   .btn.danger { color: var(--danger); }
+  .btn.small { padding: 2px 8px; font-size: 12px; }
   .btn:disabled { opacity: .5; cursor: default; }
   .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
   .search-box { display: flex; gap: 8px; }
   .search-box input { flex: 1; font-size: 16px; padding: 10px 12px; }
   .filters { margin-top: 12px; }
-  .filters .range { display: flex; gap: 4px; align-items: center; }
-  .filters .range input { width: 130px; }
-  .summary { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 13px; margin-bottom: 8px; }
+  .range { display: flex; gap: 4px; align-items: center; }
+  .range input { width: 130px; }
+  .summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; font-size: 13px; margin-bottom: 8px; }
   .summary b { font-size: 15px; }
   .table-wrap { overflow-x: auto; }
   table { border-collapse: collapse; width: 100%; font-size: 13px; }
@@ -55,33 +57,55 @@
   .badge { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 10px; color: #fff; }
   .badge.excel { background: var(--excel); } .badge.pdf { background: var(--pdf); }
   .badge.handwritten { background: var(--hand); } .badge.manual { background: var(--manual); }
+  .st { display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 10px; border: 1px solid; }
+  .st-検討中 { color: #2f6fde; background: #e8f0fd; border-color: #c4d7f8; }
+  .st-採用 { color: #1f7a45; background: #e5f5ec; border-color: #b9e2ca; }
+  .st-不採用 { color: #6b7384; background: #f1f2f4; border-color: #dcdfe4; }
+  .st-保留 { color: #9a6700; background: #fff5d6; border-color: #f0dc9c; }
+  select.st { font-size: 12px; padding: 1px 4px; cursor: pointer; }
+  .exp { font-size: 11px; padding: 0 6px; border-radius: 8px; margin-left: 4px; }
+  .exp.expired { background: var(--danger-weak); color: var(--danger); }
+  .exp.soon { background: var(--warn-bg); color: #9a6700; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chips button { font: inherit; font-size: 12px; cursor: pointer; }
+  .chips button.on { outline: 2px solid currentColor; }
   .empty { color: var(--muted); text-align: center; padding: 32px; }
 
   .drop { border: 2px dashed var(--line); border-radius: 8px; padding: 32px 16px; text-align: center; cursor: pointer; transition: .15s; }
   .drop.over, .drop:hover { border-color: var(--accent); background: var(--accent-weak); }
   .drop .types { display: flex; justify-content: center; gap: 8px; margin-top: 8px; }
-  .reg-grid { display: grid; grid-template-columns: 280px 1fr; gap: 16px; }
-  @media (max-width: 800px) { .reg-grid { grid-template-columns: 1fr; } }
-  .preview { border: 1px solid var(--line); border-radius: 6px; padding: 8px; font-size: 12px; color: var(--muted); word-break: break-all; }
+  .reg-grid { display: grid; grid-template-columns: 260px 1fr; gap: 16px; }
+  @media (max-width: 900px) { .reg-grid { grid-template-columns: 1fr; } }
+  .preview { border: 1px solid var(--line); border-radius: 6px; padding: 8px; font-size: 12px; color: var(--muted); word-break: break-all; position: sticky; top: 110px; }
   .preview img { max-width: 100%; display: block; margin-top: 6px; border-radius: 4px; }
   .notice { font-size: 12px; padding: 8px 10px; border-radius: 6px; background: var(--accent-weak); margin-bottom: 12px; }
   .notice.warn { background: var(--warn-bg); }
-  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 12px; }
+  fieldset { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px 12px; margin: 0 0 12px; }
+  legend { font-size: 12px; font-weight: 600; color: var(--muted); padding: 0 4px; }
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px 12px; }
+  .form-grid .wide { grid-column: span 2; }
+  @media (max-width: 500px) { .form-grid .wide { grid-column: auto; } }
   .items input { width: 100%; padding: 4px 6px; border-color: transparent; background: transparent; }
   .items input:hover { border-color: var(--line); }
   .items input.num { text-align: right; }
   .items td { padding: 2px 4px; }
   .items .lowconf input { background: var(--warn-bg); }
   .items .x { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 16px; }
-  .reg-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; flex-wrap: wrap; gap: 8px; }
-  .total { font-size: 15px; } .total b { font-size: 18px; }
+  .reg-foot { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 12px; flex-wrap: wrap; gap: 8px; }
+  .amounts { display: grid; grid-template-columns: auto 140px; gap: 4px 12px; align-items: center; font-size: 13px; }
+  .amounts span { text-align: right; color: var(--muted); }
+  .amounts output, .amounts input { text-align: right; font-variant-numeric: tabular-nums; }
+  .amounts .grand { font-size: 17px; font-weight: 700; }
+  .amounts .auto { font-size: 11px; }
   .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--accent-weak); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -2px; margin-right: 6px; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
   .modal-bg { position: fixed; inset: 0; background: rgba(20,25,35,.45); display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; z-index: 20; overflow-y: auto; }
-  .modal { background: var(--panel); border-radius: 10px; width: 100%; max-width: 900px; padding: 20px; }
+  .modal { background: var(--panel); border-radius: 10px; width: 100%; max-width: 960px; padding: 20px; }
   .modal h2 { margin: 0 0 4px; font-size: 17px; }
   .meta { color: var(--muted); font-size: 12px; display: flex; flex-wrap: wrap; gap: 4px 16px; margin-bottom: 12px; }
+  dl.hd { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px 16px; margin: 0 0 16px; padding: 12px; background: #fafbfc; border-radius: 8px; }
+  dl.hd div { min-width: 0; } dl.hd dt { font-size: 11px; color: var(--muted); } dl.hd dd { margin: 0; word-break: break-all; }
   .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1d2330; color: #fff; padding: 10px 18px; border-radius: 8px; z-index: 30; }
 </style>
 </head>
@@ -93,8 +117,8 @@
   </div>
   <nav>
     <button data-tab="search" class="active">明細検索</button>
+    <button data-tab="list">見積管理</button>
     <button data-tab="register">見積登録</button>
-    <button data-tab="list">見積一覧</button>
   </nav>
 </header>
 
@@ -104,11 +128,12 @@
     <div class="panel">
       <form id="search-form">
         <div class="search-box">
-          <input id="q-keyword" type="search" placeholder="品名・型番・取引先・件名で検索（スペース区切りで AND）  例: LANケーブル cat6">
+          <input id="q-keyword" type="search" placeholder="品名・型番・取引先・件名・見積番号で検索（スペース区切りで AND）  例: LANケーブル cat6">
           <button class="btn primary" type="submit">検索</button>
         </div>
         <div class="row filters">
-          <label class="f">取引先<select id="q-vendor"><option value="">すべて</option></select></label>
+          <label class="f">取引先<select id="q-vendor" class="vendor-select"><option value="">すべて</option></select></label>
+          <label class="f">ステータス<select id="q-status" class="status-select"><option value="">すべて</option></select></label>
           <label class="f">見積日<span class="range"><input id="q-from" type="date">〜<input id="q-to" type="date"></span></label>
           <label class="f">単価<span class="range"><input id="q-pmin" type="number" placeholder="下限">〜<input id="q-pmax" type="number" placeholder="上限"></span></label>
           <label class="f">取込元<select id="q-source"><option value="">すべて</option><option value="excel">Excel</option><option value="pdf">PDF</option><option value="handwritten">手書き</option><option value="manual">手入力</option></select></label>
@@ -120,14 +145,42 @@
       <div class="summary" id="search-summary"></div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>見積日</th><th>取引先</th><th>品名</th><th>仕様・型番</th><th class="num">数量</th><th>単位</th><th class="num">単価</th><th class="num">金額</th><th>取込元</th><th>件名</th></tr></thead>
+          <thead><tr><th>見積日</th><th>取引先</th><th>品名</th><th>仕様・型番</th><th class="num">数量</th><th>単位</th><th class="num">単価</th><th class="num">金額</th><th>取込元</th><th>件名</th><th>ステータス</th></tr></thead>
           <tbody id="search-body"></tbody>
         </table>
       </div>
     </div>
   </section>
 
-  <!-- 見積登録 -->
+  <!-- 見積管理 -->
+  <section id="tab-list" class="hidden">
+    <div class="panel">
+      <form id="list-form">
+        <div class="search-box">
+          <input id="l-keyword" type="search" placeholder="見積番号・取引先・担当者・件名・納入場所・メモで検索">
+        </div>
+        <div class="row filters">
+          <label class="f">ステータス<select id="l-status" class="status-select"><option value="">すべて</option></select></label>
+          <label class="f">取引先<select id="l-vendor" class="vendor-select"><option value="">すべて</option></select></label>
+          <label class="f">自社担当者<select id="l-staff"><option value="">すべて</option></select></label>
+          <label class="f">見積日<span class="range"><input id="l-from" type="date">〜<input id="l-to" type="date"></span></label>
+          <label class="f">有効期限<select id="l-expiry"><option value="">すべて</option><option value="expired">期限切れ（未決）</option><option value="soon">7日以内に期限（未決）</option></select></label>
+          <button class="btn" type="button" id="l-clear">クリア</button>
+        </div>
+      </form>
+    </div>
+    <div class="panel">
+      <div class="summary" id="list-summary"></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>ステータス</th><th>見積番号</th><th>見積日</th><th>有効期限</th><th>取引先</th><th>件名</th><th class="num">合計（税込）</th><th>自社担当</th><th>取込元</th></tr></thead>
+          <tbody id="list-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 見積登録 / 編集 -->
   <section id="tab-register" class="hidden">
     <div class="panel" id="reg-step1">
       <div class="drop" id="drop">
@@ -139,29 +192,31 @@
     </div>
 
     <div class="panel hidden" id="reg-step2">
+      <h2 id="reg-title">見積登録</h2>
       <div class="reg-grid">
-        <div>
-          <div class="preview" id="preview"></div>
-        </div>
+        <div><div class="preview" id="preview"></div></div>
         <div>
           <div class="notice" id="extract-notice"></div>
-          <div class="form-grid">
-            <label class="f">取引先 *<input id="r-vendor" list="vendor-list" required></label>
-            <label class="f">見積日<input id="r-date" type="date"></label>
-            <label class="f">件名<input id="r-subject"></label>
-            <label class="f">メモ<input id="r-memo"></label>
-          </div>
+          <div id="header-form"></div>
           <datalist id="vendor-list"></datalist>
-          <div class="table-wrap">
-            <table class="items">
-              <thead><tr><th>#</th><th>品名 *</th><th>仕様・型番</th><th class="num">数量</th><th>単位</th><th class="num">単価</th><th class="num">金額</th><th>備考</th><th></th></tr></thead>
-              <tbody id="items-body"></tbody>
-            </table>
-          </div>
-          <div class="reg-foot">
-            <button class="btn" id="add-row">＋ 行を追加</button>
-            <div class="total">合計 <b id="r-total">0</b> 円</div>
-          </div>
+          <datalist id="staff-list"></datalist>
+          <fieldset>
+            <legend>明細</legend>
+            <div class="table-wrap">
+              <table class="items">
+                <thead><tr><th>#</th><th>品名 *</th><th>仕様・型番</th><th class="num">数量</th><th>単位</th><th class="num">単価</th><th class="num">金額（税抜）</th><th>備考</th><th></th></tr></thead>
+                <tbody id="items-body"></tbody>
+              </table>
+            </div>
+            <div class="reg-foot">
+              <button class="btn" id="add-row">＋ 行を追加</button>
+              <div class="amounts">
+                <span>小計（税抜）</span><output id="a-subtotal">0</output>
+                <span>消費税 <a class="link auto" id="tax-auto" title="小計の10%で再計算">10%で計算</a></span><input id="h-tax" type="text" inputmode="numeric">
+                <span>合計（税込）</span><output id="a-total" class="grand">0</output>
+              </div>
+            </div>
+          </fieldset>
           <div class="reg-foot">
             <button class="btn" id="reg-cancel">やり直す</button>
             <button class="btn primary" id="reg-submit">スプレッドシートに登録</button>
@@ -170,23 +225,32 @@
       </div>
     </div>
   </section>
-
-  <!-- 見積一覧 -->
-  <section id="tab-list" class="hidden">
-    <div class="panel">
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>見積日</th><th>取引先</th><th>件名</th><th class="num">合計金額</th><th>取込元</th><th>ファイル名</th><th>登録日時</th></tr></thead>
-          <tbody id="list-body"></tbody>
-        </table>
-      </div>
-    </div>
-  </section>
 </main>
 
 <div id="modal" class="modal-bg hidden"></div>
 
 <script>
+// ===========================================================================
+// Definitions shared by the form, the detail view and extraction
+// ===========================================================================
+const HEADER_FIELDS = [
+  { key: 'vendor', label: '取引先', group: '基本情報', required: true, list: 'vendor-list' },
+  { key: 'vendorContact', label: '取引先担当者', group: '基本情報' },
+  { key: 'quoteNo', label: '見積番号', group: '基本情報' },
+  { key: 'subject', label: '件名', group: '基本情報', wide: true },
+  { key: 'quoteDate', label: '見積日', group: '基本情報', type: 'date' },
+  { key: 'validUntil', label: '有効期限', group: '基本情報', type: 'date' },
+  { key: 'deliveryDate', label: '納期', group: '取引条件', placeholder: '例: 受注後2週間' },
+  { key: 'deliveryPlace', label: '納入場所', group: '取引条件' },
+  { key: 'paymentTerms', label: '支払条件', group: '取引条件', placeholder: '例: 月末締め翌月末払い' },
+  { key: 'status', label: 'ステータス', group: '社内管理', type: 'status' },
+  { key: 'staff', label: '自社担当者', group: '社内管理', list: 'staff-list' },
+  { key: 'memo', label: 'メモ', group: '社内管理', wide: true },
+];
+const STATUSES = ['検討中', '採用', '不採用', '保留'];
+const OPEN_STATUSES = ['検討中', '保留']; // expiry only matters while undecided
+const TAX_RATE = 0.1;
+
 // ===========================================================================
 // API layer: google.script.run on Apps Script, in-memory mock elsewhere.
 // ===========================================================================
@@ -203,63 +267,92 @@ function api(fn, ...args) {
 const MockApi = (() => {
   const norm = s => String(s).normalize('NFKC').toLowerCase();
   const quotes = [];
-  const items = [];
+  let items = [];
   let seq = 0;
-  function register(payload, registeredAt) {
-    const quoteId = 'Q-LOCAL-' + String(++seq).padStart(3, '0');
-    const rows = payload.items.filter(it => String(it.name || '').trim()).map((it, i) => {
+  const now = () => new Date().toISOString().slice(0, 16).replace('T', ' ');
+  function build(payload) {
+    const h = payload.header || {};
+    const rows = (payload.items || []).filter(it => String(it.name || '').trim()).map((it, i) => {
       const qty = num(it.qty), unitPrice = num(it.unitPrice);
       const amount = it.amount !== '' && it.amount != null ? num(it.amount) : qty * unitPrice;
-      return { itemId: quoteId + '-' + (i + 1), quoteId, lineNo: i + 1, name: it.name, spec: it.spec || '', qty, unit: it.unit || '', unitPrice, amount, note: it.note || '' };
+      return { lineNo: i + 1, name: String(it.name).trim(), spec: it.spec || '', qty, unit: it.unit || '', unitPrice, amount, note: it.note || '' };
     });
-    if (!String(payload.header.vendor || '').trim()) throw new Error('取引先は必須です。');
+    if (!String(h.vendor || '').trim()) throw new Error('取引先は必須です。');
     if (!rows.length) throw new Error('明細が 1 行もありません。');
-    const h = payload.header;
-    quotes.push({ quoteId, registeredAt: registeredAt || new Date().toISOString().slice(0, 16).replace('T', ' '),
-      quoteDate: h.quoteDate || '', vendor: h.vendor.trim(), subject: h.subject || '', total: rows.reduce((s, r) => s + r.amount, 0),
-      sourceType: h.sourceType || 'manual', fileName: h.fileName || (payload.file && payload.file.name) || '', fileUrl: '', memo: h.memo || '' });
-    items.push(...rows);
-    return { quoteId, itemCount: rows.length };
+    const header = {};
+    HEADER_FIELDS.forEach(f => { header[f.key] = String(h[f.key] == null ? '' : h[f.key]).trim(); });
+    if (!STATUSES.includes(header.status)) header.status = STATUSES[0];
+    header.subtotal = rows.reduce((s, r) => s + r.amount, 0);
+    header.tax = h.tax !== '' && h.tax != null ? num(h.tax) : Math.floor(header.subtotal * TAX_RATE);
+    header.total = header.subtotal + header.tax;
+    return { header, rows };
   }
+  const setItems = (quoteId, rows) => {
+    items = items.filter(i => i.quoteId !== quoteId).concat(rows.map(r => ({ itemId: quoteId + '-' + r.lineNo, quoteId, ...r })));
+  };
+  const find = id => { const q = quotes.find(q => q.quoteId === id); if (!q) throw new Error('見積が見つかりません: ' + id); return q; };
   const fns = {
-    getInitData: () => ({ vendors: [...new Set(quotes.map(q => q.vendor))].sort(), quoteCount: quotes.length, itemCount: items.length }),
-    registerQuote: p => register(p),
-    listQuotes: () => [...quotes].sort((a, b) => b.registeredAt.localeCompare(a.registeredAt)),
-    getQuote: id => ({ header: quotes.find(q => q.quoteId === id), items: items.filter(i => i.quoteId === id) }),
-    deleteQuote: id => {
-      quotes.splice(quotes.findIndex(q => q.quoteId === id), 1);
-      for (let i = items.length - 1; i >= 0; i--) if (items[i].quoteId === id) items.splice(i, 1);
-      return true;
+    getInitData: () => ({
+      vendors: [...new Set(quotes.map(q => q.vendor).filter(Boolean))].sort(), staff: [...new Set(quotes.map(q => q.staff).filter(Boolean))].sort(),
+      statuses: STATUSES, quoteCount: quotes.length, itemCount: items.length }),
+    registerQuote: (p, registeredAt) => {
+      const { header, rows } = build(p);
+      const quoteId = 'Q-LOCAL-' + String(++seq).padStart(3, '0');
+      quotes.push({ ...header, quoteId, registeredAt: registeredAt || now(), updatedAt: registeredAt || now(),
+        sourceType: p.header.sourceType || 'manual', fileName: p.header.fileName || (p.file && p.file.name) || '', fileUrl: '' });
+      setItems(quoteId, rows);
+      return { quoteId, itemCount: rows.length };
     },
+    updateQuote: (id, p) => {
+      const { header, rows } = build(p);
+      Object.assign(find(id), header, { updatedAt: now() });
+      setItems(id, rows);
+      return { quoteId: id, itemCount: rows.length };
+    },
+    updateQuoteStatus: (id, status) => { Object.assign(find(id), { status, updatedAt: now() }); return true; },
+    listQuotes: () => [...quotes].sort((a, b) => (b.quoteDate || '').localeCompare(a.quoteDate || '') || b.registeredAt.localeCompare(a.registeredAt)),
+    getQuote: id => ({ header: find(id), items: items.filter(i => i.quoteId === id) }),
+    deleteQuote: id => { quotes.splice(quotes.indexOf(find(id)), 1); items = items.filter(i => i.quoteId !== id); return true; },
     searchItems: q => {
       const byId = Object.fromEntries(quotes.map(h => [h.quoteId, h]));
       const terms = norm(q.keyword || '').split(/\s+/).filter(Boolean);
-      const out = items.map(it => ({ ...it, ...pick(byId[it.quoteId]) })).filter(r =>
-        (!q.vendor || r.vendor === q.vendor) && (!q.sourceType || r.sourceType === q.sourceType) &&
+      const out = items.map(it => {
+        const h = byId[it.quoteId];
+        return { ...it, vendor: h.vendor, subject: h.subject, quoteNo: h.quoteNo, quoteDate: h.quoteDate, status: h.status, sourceType: h.sourceType };
+      }).filter(r =>
+        (!q.vendor || r.vendor === q.vendor) && (!q.status || r.status === q.status) && (!q.sourceType || r.sourceType === q.sourceType) &&
         (!q.dateFrom || (r.quoteDate && r.quoteDate >= q.dateFrom)) && (!q.dateTo || (r.quoteDate && r.quoteDate <= q.dateTo)) &&
         (q.priceMin === '' || r.unitPrice >= Number(q.priceMin)) && (q.priceMax === '' || r.unitPrice <= Number(q.priceMax)) &&
-        terms.every(t => norm([r.name, r.spec, r.note, r.vendor, r.subject].join(' ')).includes(t)));
+        terms.every(t => norm([r.name, r.spec, r.note, r.vendor, r.subject, r.quoteNo].join(' ')).includes(t)));
       out.sort((a, b) => (b.quoteDate || '').localeCompare(a.quoteDate || ''));
       return { total: out.length, items: out };
     },
   };
-  const pick = h => ({ vendor: h.vendor, subject: h.subject, quoteDate: h.quoteDate, sourceType: h.sourceType });
-  const S = (quoteDate, vendor, subject, sourceType, fileName, rows) => ({ header: { quoteDate, vendor, subject, sourceType, fileName },
-    items: rows.map(([name, spec, qty, unit, unitPrice]) => ({ name, spec, qty, unit, unitPrice })) });
+  const S = (header, rows) => ({ header, items: rows.map(([name, spec, qty, unit, unitPrice]) => ({ name, spec, qty, unit, unitPrice })) });
   [
-    S('2026-07-03', '東和電機株式会社', '本社3F 照明LED化工事', 'excel', '見積_東和電機_20260703.xlsx', [
+    S({ status: '採用', quoteNo: 'TW-2026-0412', quoteDate: '2026-07-03', validUntil: '2026-08-02', vendor: '東和電機株式会社', vendorContact: '佐藤',
+      subject: '本社3F 照明LED化工事', deliveryDate: '受注後3週間', deliveryPlace: '本社3F', paymentTerms: '月末締め翌月末払い', staff: '田中',
+      sourceType: 'excel', fileName: '見積_東和電機_20260703.xlsx' }, [
       ['LEDベースライト', 'LDL40 昼白色 4000lm', 48, '台', 12800], ['既設照明器具撤去', '40W×2灯', 48, '台', 1500],
       ['配線工事', 'VVF1.6-3C', 1, '式', 85000], ['産廃処分費', '', 1, '式', 32000]]),
-    S('2026-07-18', 'ネットワークス山田', '会議室 LAN 増設', 'pdf', 'Q-2026-0718.pdf', [
+    S({ status: '不採用', quoteNo: 'Q-2026-0718', quoteDate: '2026-07-18', validUntil: '2026-08-17', vendor: 'ネットワークス山田', vendorContact: '山田',
+      subject: '会議室 LAN 増設', deliveryDate: '2026-08-末', deliveryPlace: '本社2F 会議室', paymentTerms: '検収後30日', staff: '鈴木',
+      sourceType: 'pdf', fileName: 'Q-2026-0718.pdf', memo: '他社相見積の結果、不採用' }, [
       ['LANケーブル', 'Cat6A 305m巻', 2, '巻', 38000], ['スイッチングハブ', '24ポート PoE+ GS1900-24HP', 1, '台', 64500],
       ['情報コンセント', 'Cat6A 2口', 12, '個', 2400], ['敷設・結線作業', '', 2, '人日', 45000]]),
-    S('2026-08-05', '東和電機株式会社', '倉庫 照明・コンセント増設', 'pdf', '見積書_倉庫.pdf', [
+    S({ status: '検討中', quoteNo: 'TW-2026-0533', quoteDate: '2026-08-05', validUntil: '2026-09-04', vendor: '東和電機株式会社', vendorContact: '佐藤',
+      subject: '倉庫 照明・コンセント増設', deliveryDate: '受注後1ヶ月', deliveryPlace: '第2倉庫', paymentTerms: '月末締め翌月末払い', staff: '田中',
+      sourceType: 'pdf', fileName: '見積書_倉庫.pdf' }, [
       ['LED高天井照明', '150W 水銀灯400W相当', 16, '台', 29800], ['コンセント増設', '2口 接地付', 10, '箇所', 8500], ['高所作業車', '10m 1日', 2, '日', 38000]]),
-    S('2026-08-22', '丸山建材', '事務所 内装補修', 'handwritten', 'memo_0822.jpg', [
+    S({ status: '保留', quoteDate: '2026-08-22', validUntil: '2026-10-03', vendor: '丸山建材', vendorContact: '丸山',
+      subject: '事務所 内装補修', deliveryPlace: '本社1F 事務所', paymentTerms: '現金', staff: '鈴木',
+      sourceType: 'handwritten', fileName: 'memo_0822.jpg', memo: '現地打合せ時の手書きメモより' }, [
       ['石膏ボード', '12.5mm 910×1820', 20, '枚', 980], ['クロス張替', '量産品', 45, 'm2', 1200], ['タイルカーペット', '500角 グレー', 60, '枚', 750]]),
-    S('2026-09-10', 'ネットワークス山田', '無線LAN 更新', 'excel', '無線LAN更新_見積.xlsx', [
+    S({ status: '検討中', quoteNo: 'Q-2026-0910', quoteDate: '2026-09-10', validUntil: '2026-10-10', vendor: 'ネットワークス山田', vendorContact: '山田',
+      subject: '無線LAN 更新', deliveryDate: '2026-11-中旬', deliveryPlace: '本社 全フロア', paymentTerms: '検収後30日', staff: '田中',
+      sourceType: 'excel', fileName: '無線LAN更新_見積.xlsx' }, [
       ['無線アクセスポイント', 'Wi-Fi 6E WAX630E', 6, '台', 52000], ['LANケーブル', 'Cat6 20m', 6, '本', 2200], ['設定作業', 'SSID/VLAN設計含む', 1, '式', 60000]]),
-  ].forEach((p, i) => register(p, p.header.quoteDate + ' 1' + i + ':00'));
+  ].forEach((p, i) => fns.registerQuote(p, p.header.quoteDate + ' 1' + i + ':00'));
   return {
     call: (fn, args) => new Promise((resolve, reject) => setTimeout(() => {
       try { resolve(JSON.parse(JSON.stringify(fns[fn](...args)))); } catch (e) { reject(e); }
@@ -279,6 +372,22 @@ function num(v) {
 }
 const SOURCE_LABEL = { excel: 'Excel', pdf: 'PDF', handwritten: '手書き', manual: '手入力' };
 const badge = t => `<span class="badge ${esc(t)}">${esc(SOURCE_LABEL[t] || t)}</span>`;
+const statusPill = s => `<span class="st st-${esc(s)}">${esc(s)}</span>`;
+const statusSelect = (id, s) => `<select class="st st-${esc(s)}" data-status-for="${esc(id)}">${STATUSES.map(x => `<option${x === s ? ' selected' : ''}>${x}</option>`).join('')}</select>`;
+
+function isoDate(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function addDays(iso, days) { const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + days); return isoDate(d); }
+function addMonths(iso, months) { const d = new Date(iso + 'T00:00:00'); d.setMonth(d.getMonth() + months); return isoDate(d); }
+
+function expiryState(q) {
+  if (!q.validUntil || !OPEN_STATUSES.includes(q.status)) return '';
+  const today = isoDate(new Date());
+  if (q.validUntil < today) return 'expired';
+  if (q.validUntil <= addDays(today, 7)) return 'soon';
+  return '';
+}
+const expiryTag = q => ({ expired: '<span class="exp expired">期限切れ</span>', soon: '<span class="exp soon">期限間近</span>' }[expiryState(q)] || '');
+
 function toast(msg) {
   const el = document.createElement('div');
   el.className = 'toast'; el.textContent = msg;
@@ -302,6 +411,7 @@ function highlight(text, terms) {
   ranges.forEach(([s, e]) => { if (s < pos) return; out += esc(src.slice(pos, s)) + '<mark>' + esc(src.slice(s, e)) + '</mark>'; pos = e; });
   return out + esc(src.slice(pos));
 }
+const termsOf = kw => kw.normalize('NFKC').toLowerCase().split(/\s+/).filter(Boolean);
 
 // ===========================================================================
 // Tabs & init
@@ -313,22 +423,48 @@ function showTab(tab) {
   if (tab === 'list') loadList();
 }
 
+function fillSelect(sel, values) {
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">すべて</option>' + values.map(v => `<option>${esc(v)}</option>`).join('');
+  sel.value = values.includes(cur) ? cur : '';
+}
+
 async function refreshInit() {
   const d = await api('getInitData');
   $('stats').textContent = `見積 ${d.quoteCount} 件 / 明細 ${d.itemCount} 行`;
-  const cur = $('q-vendor').value;
-  $('q-vendor').innerHTML = '<option value="">すべて</option>' + d.vendors.map(v => `<option>${esc(v)}</option>`).join('');
-  $('q-vendor').value = d.vendors.includes(cur) ? cur : '';
+  document.querySelectorAll('.vendor-select').forEach(s => fillSelect(s, d.vendors));
+  document.querySelectorAll('.status-select').forEach(s => fillSelect(s, STATUSES));
+  fillSelect($('l-staff'), d.staff);
   $('vendor-list').innerHTML = d.vendors.map(v => `<option value="${esc(v)}">`).join('');
+  $('staff-list').innerHTML = d.staff.map(v => `<option value="${esc(v)}">`).join('');
 }
 
+function refreshAll() {
+  refreshInit();
+  runSearch();
+  if (!$('tab-list').classList.contains('hidden')) loadList();
+}
+
+// Status change from any list or the detail view.
+document.addEventListener('change', async e => {
+  const sel = e.target.closest('[data-status-for]');
+  if (!sel) return;
+  sel.className = 'st st-' + sel.value;
+  try {
+    await api('updateQuoteStatus', sel.dataset.statusFor, sel.value);
+    toast(`ステータスを「${sel.value}」に変更しました`);
+    if (!$('tab-list').classList.contains('hidden')) loadList();
+    runSearch();
+  } catch (err) { showError(err); }
+});
+
 // ===========================================================================
-// Search
+// 明細検索
 // ===========================================================================
 let searchSeq = 0;
 async function runSearch() {
   const q = {
-    keyword: $('q-keyword').value.trim(), vendor: $('q-vendor').value, dateFrom: $('q-from').value, dateTo: $('q-to').value,
+    keyword: $('q-keyword').value.trim(), vendor: $('q-vendor').value, status: $('q-status').value, dateFrom: $('q-from').value, dateTo: $('q-to').value,
     priceMin: $('q-pmin').value, priceMax: $('q-pmax').value, sourceType: $('q-source').value,
   };
   const mySeq = ++searchSeq;
@@ -341,7 +477,7 @@ async function runSearch() {
 }
 
 function renderSearch(res, q) {
-  const terms = q.keyword.normalize('NFKC').toLowerCase().split(/\s+/).filter(Boolean);
+  const terms = termsOf(q.keyword);
   const prices = res.items.map(r => r.unitPrice).filter(p => p > 0);
   let summary = `<span>該当 <b>${res.total}</b> 件${res.total > res.items.length ? `（先頭 ${res.items.length} 件を表示）` : ''}</span>`;
   if (prices.length && (terms.length || q.vendor)) {
@@ -354,49 +490,100 @@ function renderSearch(res, q) {
       <td class="wrap">${highlight(r.name, terms)}</td><td class="wrap">${highlight(r.spec, terms)}</td>
       <td class="num">${yen(r.qty)}</td><td>${esc(r.unit)}</td><td class="num">${yen(r.unitPrice)}</td><td class="num">${yen(r.amount)}</td>
       <td>${badge(r.sourceType)}</td><td><a class="link" data-quote="${esc(r.quoteId)}">${highlight(r.subject || '(件名なし)', terms)}</a></td>
-    </tr>`).join('') : '<tr><td colspan="10" class="empty">該当する明細はありません</td></tr>';
+      <td>${statusPill(r.status)}</td>
+    </tr>`).join('') : '<tr><td colspan="11" class="empty">該当する明細はありません</td></tr>';
 }
 
 $('search-form').addEventListener('submit', e => { e.preventDefault(); runSearch(); });
-['q-vendor', 'q-from', 'q-to', 'q-source'].forEach(id => $(id).addEventListener('change', runSearch));
+['q-vendor', 'q-status', 'q-from', 'q-to', 'q-source'].forEach(id => $(id).addEventListener('change', runSearch));
 $('q-clear').addEventListener('click', () => { $('search-form').reset(); runSearch(); });
 let keyTimer;
 $('q-keyword').addEventListener('input', () => { clearTimeout(keyTimer); keyTimer = setTimeout(runSearch, 300); });
 document.addEventListener('click', e => { const a = e.target.closest('[data-quote]'); if (a) openQuote(a.dataset.quote); });
 
 // ===========================================================================
-// Quote list & detail
+// 見積管理 (header list; filtering happens here on the client)
 // ===========================================================================
+let allQuotes = [];
 async function loadList() {
-  $('list-body').innerHTML = '<tr><td colspan="7" class="empty"><span class="spinner"></span>読み込み中…</td></tr>';
+  $('list-body').innerHTML = '<tr><td colspan="9" class="empty"><span class="spinner"></span>読み込み中…</td></tr>';
   try {
-    const list = await api('listQuotes');
-    $('list-body').innerHTML = list.length ? list.map(q => `<tr>
-        <td>${esc(q.quoteDate)}</td><td>${esc(q.vendor)}</td><td><a class="link" data-quote="${esc(q.quoteId)}">${esc(q.subject || '(件名なし)')}</a></td>
-        <td class="num">${yen(q.total)}</td><td>${badge(q.sourceType)}</td><td>${esc(q.fileName)}</td><td>${esc(q.registeredAt)}</td>
-      </tr>`).join('') : '<tr><td colspan="7" class="empty">登録された見積はありません</td></tr>';
+    allQuotes = await api('listQuotes');
+    renderList();
   } catch (e) { showError(e); }
 }
 
+function filterQuotes() {
+  const terms = termsOf($('l-keyword').value);
+  const f = { status: $('l-status').value, vendor: $('l-vendor').value, staff: $('l-staff').value,
+    from: $('l-from').value, to: $('l-to').value, expiry: $('l-expiry').value };
+  return allQuotes.filter(q =>
+    (!f.status || q.status === f.status) && (!f.vendor || q.vendor === f.vendor) && (!f.staff || q.staff === f.staff) &&
+    (!f.from || (q.quoteDate && q.quoteDate >= f.from)) && (!f.to || (q.quoteDate && q.quoteDate <= f.to)) &&
+    (!f.expiry || expiryState(q) === f.expiry) &&
+    terms.every(t => [q.quoteNo, q.vendor, q.vendorContact, q.staff, q.subject, q.deliveryPlace, q.memo].join(' ').normalize('NFKC').toLowerCase().includes(t)));
+}
+
+function renderList() {
+  const terms = termsOf($('l-keyword').value);
+  const rows = filterQuotes();
+  const counts = Object.fromEntries(STATUSES.map(s => [s, rows.filter(q => q.status === s).length]));
+  const expired = rows.filter(q => expiryState(q) === 'expired').length;
+  const cur = $('l-status').value;
+  $('list-summary').innerHTML = `<span>該当 <b>${rows.length}</b> 件</span><span>合計（税込） <b>¥${yen(rows.reduce((s, q) => s + q.total, 0))}</b></span>
+    <span class="chips">${STATUSES.map(s => `<button type="button" class="st st-${s}${cur === s ? ' on' : ''}" data-chip="${s}">${s} ${counts[s]}</button>`).join('')}</span>
+    ${expired ? `<span class="exp expired">期限切れ（未決） ${expired} 件</span>` : ''}`;
+  $('list-body').innerHTML = rows.length ? rows.map(q => `<tr>
+      <td>${statusSelect(q.quoteId, q.status)}</td><td>${highlight(q.quoteNo || '-', terms)}</td><td>${esc(q.quoteDate)}</td>
+      <td>${esc(q.validUntil)}${expiryTag(q)}</td><td>${highlight(q.vendor, terms)}${q.vendorContact ? ` <small style="color:var(--muted)">${highlight(q.vendorContact, terms)}</small>` : ''}</td>
+      <td class="wrap"><a class="link" data-quote="${esc(q.quoteId)}">${highlight(q.subject || '(件名なし)', terms)}</a></td>
+      <td class="num">${yen(q.total)}</td><td>${highlight(q.staff, terms)}</td><td>${badge(q.sourceType)}</td>
+    </tr>`).join('') : '<tr><td colspan="9" class="empty">該当する見積はありません</td></tr>';
+}
+
+$('list-form').addEventListener('submit', e => e.preventDefault());
+$('list-form').addEventListener('input', renderList);
+$('list-form').addEventListener('change', renderList);
+$('l-clear').addEventListener('click', () => { $('list-form').reset(); renderList(); });
+$('list-summary').addEventListener('click', e => {
+  const chip = e.target.closest('[data-chip]');
+  if (!chip) return;
+  $('l-status').value = $('l-status').value === chip.dataset.chip ? '' : chip.dataset.chip;
+  renderList();
+});
+
+// ===========================================================================
+// Quote detail
+// ===========================================================================
 async function openQuote(id) {
   try {
     const { header: h, items } = await api('getQuote', id);
+    const val = f => {
+      if (f.key === 'status') return statusSelect(h.quoteId, h.status);
+      if (f.key === 'validUntil') return esc(h.validUntil || '-') + expiryTag(h);
+      return esc(h[f.key] || '-');
+    };
     $('modal').innerHTML = `<div class="modal">
       <h2>${esc(h.subject || '(件名なし)')}</h2>
-      <div class="meta"><span>${esc(h.vendor)}</span><span>見積日 ${esc(h.quoteDate || '-')}</span><span>${badge(h.sourceType)} ${
-        h.fileUrl ? `<a class="link" href="${esc(h.fileUrl)}" target="_blank">${esc(h.fileName)}</a>` : esc(h.fileName)}</span>
-        <span>登録 ${esc(h.registeredAt)}</span><span>ID ${esc(h.quoteId)}</span></div>
-      ${h.memo ? `<div class="notice">${esc(h.memo)}</div>` : ''}
+      <div class="meta"><span>${badge(h.sourceType)} ${h.fileUrl ? `<a class="link" href="${esc(h.fileUrl)}" target="_blank">${esc(h.fileName)}</a>` : esc(h.fileName || '元ファイルなし')}</span>
+        <span>登録 ${esc(h.registeredAt)}</span><span>更新 ${esc(h.updatedAt)}</span><span>ID ${esc(h.quoteId)}</span></div>
+      <dl class="hd">${HEADER_FIELDS.filter(f => f.key !== 'subject').map(f => `<div><dt>${f.label}</dt><dd>${val(f)}</dd></div>`).join('')}</dl>
       <div class="table-wrap"><table>
         <thead><tr><th>#</th><th>品名</th><th>仕様・型番</th><th class="num">数量</th><th>単位</th><th class="num">単価</th><th class="num">金額</th><th>備考</th></tr></thead>
         <tbody>${items.map(r => `<tr><td>${r.lineNo}</td><td class="wrap">${esc(r.name)}</td><td class="wrap">${esc(r.spec)}</td>
           <td class="num">${yen(r.qty)}</td><td>${esc(r.unit)}</td><td class="num">${yen(r.unitPrice)}</td><td class="num">${yen(r.amount)}</td><td>${esc(r.note)}</td></tr>`).join('')}</tbody>
-        <tfoot><tr><td colspan="6" class="num"><b>合計</b></td><td class="num"><b>${yen(h.total)}</b></td><td></td></tr></tfoot>
+        <tfoot>
+          <tr><td colspan="6" class="num">小計（税抜）</td><td class="num">${yen(h.subtotal)}</td><td></td></tr>
+          <tr><td colspan="6" class="num">消費税</td><td class="num">${yen(h.tax)}</td><td></td></tr>
+          <tr><td colspan="6" class="num"><b>合計（税込）</b></td><td class="num"><b>${yen(h.total)}</b></td><td></td></tr>
+        </tfoot>
       </table></div>
-      <div class="reg-foot"><button class="btn danger" id="m-del">この見積を削除</button><button class="btn" id="m-close">閉じる</button></div>
+      <div class="reg-foot"><button class="btn danger" id="m-del">この見積を削除</button>
+        <span><button class="btn" id="m-close">閉じる</button> <button class="btn primary" id="m-edit">編集</button></span></div>
     </div>`;
     $('modal').classList.remove('hidden');
     $('m-close').onclick = closeModal;
+    $('m-edit').onclick = () => { closeModal(); startEdit(h, items); };
     $('m-del').onclick = async () => {
       if (!confirm('この見積と明細をスプレッドシートから削除します。よろしいですか？')) return;
       try { await api('deleteQuote', id); closeModal(); toast('削除しました'); refreshAll(); } catch (e) { showError(e); }
@@ -407,16 +594,18 @@ function closeModal() { $('modal').classList.add('hidden'); $('modal').innerHTML
 $('modal').addEventListener('click', e => { if (e.target === $('modal')) closeModal(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-function refreshAll() {
-  refreshInit();
-  runSearch();
-  if (!$('tab-list').classList.contains('hidden')) loadList();
-}
+// ===========================================================================
+// 見積登録 / 編集: file -> extraction -> review -> save
+// ===========================================================================
+let current = null; // { mode: 'new' | 'edit', quoteId?, sourceType, file, base64 }
 
-// ===========================================================================
-// Register: file -> extraction -> review -> save
-// ===========================================================================
-let current = null; // { sourceType, file, base64 }
+// Header form built from HEADER_FIELDS, grouped into fieldsets.
+$('header-form').innerHTML = [...new Set(HEADER_FIELDS.map(f => f.group))].map(g => `<fieldset><legend>${g}</legend><div class="form-grid">${
+  HEADER_FIELDS.filter(f => f.group === g).map(f => `<label class="f${f.wide ? ' wide' : ''}">${f.label}${f.required ? ' *' : ''}${
+    f.type === 'status'
+      ? `<select id="h-${f.key}">${STATUSES.map(s => `<option>${s}</option>`).join('')}</select>`
+      : `<input id="h-${f.key}" type="${f.type || 'text'}"${f.list ? ` list="${f.list}"` : ''}${f.placeholder ? ` placeholder="${f.placeholder}"` : ''}>`
+  }</label>`).join('')}</div></fieldset>`).join('');
 
 const drop = $('drop');
 drop.addEventListener('click', () => $('file').click());
@@ -425,13 +614,19 @@ drop.addEventListener('dragleave', () => drop.classList.remove('over'));
 drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
 $('file').addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); e.target.value = ''; });
 $('manual-btn').addEventListener('click', () => {
-  current = { sourceType: 'manual', file: null };
-  openReview({ header: {}, items: [{}, {}, {}] }, '手入力モードです。明細を入力して登録してください。', false);
+  current = { mode: 'new', sourceType: 'manual', file: null };
+  openReview({ header: {}, items: [{}, {}, {}] }, '手入力モードです。ヘッダー情報と明細を入力して登録してください。', false);
   $('preview').innerHTML = '手入力（元ファイルなし）';
 });
-$('reg-cancel').addEventListener('click', resetRegister);
+$('reg-cancel').addEventListener('click', () => {
+  const wasEdit = current && current.mode === 'edit';
+  resetRegister();
+  if (wasEdit) showTab('list');
+});
 $('add-row').addEventListener('click', () => { addItemRow({}); });
 $('reg-submit').addEventListener('click', submitRegister);
+$('h-tax').addEventListener('input', () => { $('h-tax').dataset.auto = ''; recalc(); });
+$('tax-auto').addEventListener('click', () => { $('h-tax').dataset.auto = '1'; recalc(); });
 
 function detectType(file) {
   const name = file.name.toLowerCase();
@@ -445,14 +640,14 @@ async function handleFile(file) {
   const sourceType = detectType(file);
   if (!sourceType) return alert('対応していない形式です（Excel / CSV / PDF / 画像）');
   const buf = await file.arrayBuffer();
-  current = { sourceType, file, base64: file.size <= 10 * 1024 * 1024 ? toBase64(buf) : null };
+  current = { mode: 'new', sourceType, file, base64: file.size <= 10 * 1024 * 1024 ? toBase64(buf) : null };
 
   $('reg-step1').classList.add('hidden');
   $('reg-step2').classList.remove('hidden');
   $('preview').innerHTML = `${badge(sourceType)} ${esc(file.name)}<br>${(file.size / 1024).toFixed(1)} KB` +
     (sourceType === 'handwritten' ? `<img src="${URL.createObjectURL(file)}" alt="">` : '');
   $('extract-notice').className = 'notice';
-  $('extract-notice').innerHTML = '<span class="spinner"></span>明細を抽出しています…';
+  $('extract-notice').innerHTML = '<span class="spinner"></span>ヘッダー情報と明細を抽出しています…';
   $('items-body').innerHTML = '';
 
   try {
@@ -467,6 +662,13 @@ async function handleFile(file) {
   }
 }
 
+function startEdit(h, items) {
+  current = { mode: 'edit', quoteId: h.quoteId, sourceType: h.sourceType, file: null };
+  showTab('register');
+  $('preview').innerHTML = `${badge(h.sourceType)} ${h.fileUrl ? `<a class="link" href="${esc(h.fileUrl)}" target="_blank">${esc(h.fileName)}</a>` : esc(h.fileName || '元ファイルなし')}`;
+  openReview({ header: h, items, tax: h.tax }, `見積 <b>${esc(h.quoteNo || h.quoteId)}</b> を編集しています。保存すると明細は入力内容で置き換わります。`, false);
+}
+
 function toBase64(buf) {
   let bin = '';
   const bytes = new Uint8Array(buf);
@@ -475,18 +677,34 @@ function toBase64(buf) {
 }
 
 function openReview(result, message, warn) {
+  const edit = current.mode === 'edit';
+  $('reg-title').textContent = edit ? '見積の編集' : '見積登録';
+  $('reg-submit').textContent = edit ? '変更を保存' : 'スプレッドシートに登録';
+  $('reg-cancel').textContent = edit ? 'キャンセル' : 'やり直す';
   $('reg-step1').classList.add('hidden');
   $('reg-step2').classList.remove('hidden');
-  $('extract-notice').className = 'notice' + (warn ? ' warn' : '');
-  $('extract-notice').innerHTML = message;
+
   const h = result.header || {};
-  $('r-vendor').value = h.vendor || '';
-  $('r-date').value = h.quoteDate || '';
-  $('r-subject').value = h.subject || '';
-  $('r-memo').value = h.memo || '';
+  HEADER_FIELDS.forEach(f => { $('h-' + f.key).value = h[f.key] || (f.type === 'status' ? STATUSES[0] : ''); });
+  $('h-tax').dataset.auto = '1';
   $('items-body').innerHTML = '';
   (result.items.length ? result.items : [{}]).forEach(addItemRow);
+  // A tax that differs from the standard 10% (e.g. rounding, reduced rate) is kept as a manual value;
+  // otherwise it stays auto so it follows edits to the line items.
+  if (result.tax !== undefined && result.tax !== '' && num(result.tax) !== currentTotals().tax) {
+    $('h-tax').dataset.auto = '';
+    $('h-tax').value = result.tax;
+  }
   recalc();
+
+  // Cross-check the grand total written on the document against the line items.
+  if (result.docTotal && num(result.docTotal) !== currentTotals().total) {
+    message += `<br>⚠ 書類記載の合計 ¥${yen(result.docTotal)} と、明細から計算した合計 ¥${yen(currentTotals().total)} が一致しません。`;
+    warn = true;
+  }
+  $('extract-notice').className = 'notice' + (warn ? ' warn' : '');
+  $('extract-notice').innerHTML = message;
+  window.scrollTo(0, 0);
 }
 
 const ITEM_FIELDS = [
@@ -520,31 +738,41 @@ function readItems() {
   }).filter(it => it.name);
 }
 
+function currentTotals() {
+  const subtotal = readItems().reduce((s, it) => s + (it.amount !== '' ? num(it.amount) : num(it.qty) * num(it.unitPrice)), 0);
+  const tax = $('h-tax').dataset.auto ? Math.floor(subtotal * TAX_RATE) : num($('h-tax').value);
+  return { subtotal, tax, total: subtotal + tax };
+}
+
 function recalc() {
   [...$('items-body').children].forEach((tr, i) => { tr.querySelector('.ln').textContent = i + 1; });
-  const total = readItems().reduce((s, it) => s + (it.amount !== '' ? num(it.amount) : num(it.qty) * num(it.unitPrice)), 0);
-  $('r-total').textContent = yen(total);
+  const t = currentTotals();
+  if ($('h-tax').dataset.auto) $('h-tax').value = t.tax;
+  $('a-subtotal').textContent = yen(t.subtotal);
+  $('a-total').textContent = yen(t.total);
 }
 
 async function submitRegister() {
   const items = readItems();
-  if (!$('r-vendor').value.trim()) { $('r-vendor').focus(); return alert('取引先を入力してください'); }
+  if (!$('h-vendor').value.trim()) { $('h-vendor').focus(); return alert('取引先を入力してください'); }
   if (!items.length) return alert('品名が入力された明細が 1 行もありません');
+  const header = { sourceType: current.sourceType, fileName: current.file ? current.file.name : '', tax: String(currentTotals().tax) };
+  HEADER_FIELDS.forEach(f => { header[f.key] = $('h-' + f.key).value.trim(); });
   const payload = {
-    header: { vendor: $('r-vendor').value.trim(), quoteDate: $('r-date').value, subject: $('r-subject').value.trim(),
-      memo: $('r-memo').value.trim(), sourceType: current.sourceType, fileName: current.file ? current.file.name : '' },
-    items,
+    header, items,
     file: current.file && current.base64 ? { name: current.file.name, mimeType: current.file.type || 'application/octet-stream', base64: current.base64 } : null,
   };
+  const edit = current.mode === 'edit';
   const btn = $('reg-submit');
-  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>登録中…';
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>保存中…';
   try {
-    const res = await api('registerQuote', payload);
-    toast(`登録しました（${res.itemCount} 行）`);
+    const res = edit ? await api('updateQuote', current.quoteId, payload) : await api('registerQuote', payload);
+    toast(edit ? '変更を保存しました' : `登録しました（${res.itemCount} 行）`);
     resetRegister();
     refreshAll();
+    if (edit) { showTab('list'); openQuote(res.quoteId); }
   } catch (e) { showError(e); }
-  finally { btn.disabled = false; btn.textContent = 'スプレッドシートに登録'; }
+  finally { btn.disabled = false; btn.textContent = edit ? '変更を保存' : 'スプレッドシートに登録'; }
 }
 
 function resetRegister() {
@@ -554,35 +782,85 @@ function resetRegister() {
 }
 
 // ---------------------------------------------------------------------------
-// Extractors. Each returns { header, items, message, warn }.
+// Extractors. Each returns { header, items, tax?, docTotal?, message, warn }.
 // ---------------------------------------------------------------------------
 const COLS = {
   name: /品名|品目|名称|摘要|内容|項目/, spec: /仕様|型番|規格|型式/, qty: /数量|数/, unit: /単位/,
-  unitPrice: /単価/, amount: /金額|価格|小計/, note: /備考/,
+  unitPrice: /単価/, amount: /金額|価格/, note: /備考/,
 };
-const STOP_ROW = /^(小計|合計|総合計|消費税|値引|税込|税抜)/;
+const STOP_ROW = /^(小計|合計|総合計|総額|消費税|値引|税込|税抜)/;
 const DATE_RE = /(20\d{2}|令和\s*\d+)\s*[年\/.\-]\s*(\d{1,2})\s*[月\/.\-]\s*(\d{1,2})/;
 
+// Label patterns for header fields. The value is either after the label in the same cell
+// ("件名：〇〇") or in the next non-empty cell.
+const HEADER_LABELS = [
+  ['quoteNo', /^(御?見積(書)?\s*(番号|No\.?|NO\.?)|見積No\.?)\s*[:：]?\s*(?<v>.*)$/i],
+  ['quoteDate', /^(発行日|見積日|作成日|日付)\s*[:：]?\s*(?<v>.*)$/],
+  ['subject', /^(件\s*名|工事名|案件名)\s*[:：]?\s*(?<v>.*)$/],
+  ['validUntil', /^(見積)?(有効期限|有効期間)\s*[:：]?\s*(?<v>.*)$/],
+  ['deliveryDate', /^(納\s*期|納入期日|工\s*期)\s*[:：]?\s*(?<v>.*)$/],
+  ['deliveryPlace', /^(納入場所|納品場所|受渡場所|工事場所|現場)\s*[:：]?\s*(?<v>.*)$/],
+  ['paymentTerms', /^(お?支払条件|支払方法|取引条件)\s*[:：]?\s*(?<v>.*)$/],
+  ['vendorContact', /^(ご?担当者?)\s*[:：]?\s*(?<v>.*)$/],
+];
+
 function toIsoDate(v) {
-  if (v instanceof Date && !isNaN(v)) return v.getFullYear() + '-' + String(v.getMonth() + 1).padStart(2, '0') + '-' + String(v.getDate()).padStart(2, '0');
+  if (v instanceof Date && !isNaN(v)) return isoDate(v);
   const m = String(v || '').normalize('NFKC').match(DATE_RE);
   if (!m) return '';
   const y = m[1].startsWith('令和') ? 2018 + Number(m[1].replace(/\D/g, '')) : Number(m[1]);
   return y + '-' + m[2].padStart(2, '0') + '-' + m[3].padStart(2, '0');
 }
 
-// Guesses header info (date / subject / issuing company) from free-text cells or lines.
+// Guesses header fields from a flat list of cells (Excel) or text chunks (PDF).
 function guessHeader(cells) {
   const h = {};
+  const str = c => (c instanceof Date ? isoDate(c) : String(c == null ? '' : c)).normalize('NFKC').trim();
+  const used = new Set();
+  for (let i = 0; i < cells.length; i++) {
+    const s = str(cells[i]);
+    if (!s) continue;
+    for (const [key, re] of HEADER_LABELS) {
+      const m = s.match(re);
+      if (!m || h[key]) continue;
+      let v = m.groups.v.trim(), j = i + 1;
+      if (!v) { while (j < cells.length && !str(cells[j])) j++; if (j < cells.length) { v = cells[j] instanceof Date ? isoDate(cells[j]) : str(cells[j]); used.add(j); } }
+      h[key] = v;
+      used.add(i);
+      break;
+    }
+  }
   cells.forEach((c, i) => {
-    const s = String(c == null ? '' : c).normalize('NFKC').trim();
-    if (!s) return;
-    if (!h.quoteDate && (c instanceof Date || DATE_RE.test(s))) h.quoteDate = toIsoDate(c);
-    const subj = s.match(/^(件名|工事名|案件名)\s*[:：]?\s*(.*)$/);
-    if (!h.subject && subj) h.subject = subj[2] || String(cells[i + 1] || '').trim();
-    if (!h.vendor && /(株式会社|有限会社|\(株\)|\(有\)|商店|工業|電機|建材)/.test(s) && !/御中|様/.test(s) && s.length < 40) h.vendor = s;
+    if (used.has(i)) return;
+    const s = str(c);
+    if (!h.quoteDate && (c instanceof Date || DATE_RE.test(s))) h.quoteDate = s;
+    if (!h.vendor && /(株式会社|有限会社|\(株\)|\(有\)|商店|工業|電機|建材|設備)/.test(s) && !/御中|様/.test(s) && s.length < 40) h.vendor = s;
   });
+  if (h.quoteDate) h.quoteDate = toIsoDate(h.quoteDate);
+  if (h.validUntil) {
+    // "2026年10月31日" or relative like "発行日より30日" / "1ヶ月"
+    const rel = h.validUntil;
+    h.validUntil = toIsoDate(rel);
+    if (!h.validUntil && h.quoteDate) {
+      const d = rel.match(/(\d+)\s*日/), mo = rel.match(/(\d+)\s*(ヶ|か|カ|ケ)?\s*月/);
+      h.validUntil = d ? addDays(h.quoteDate, Number(d[1])) : mo ? addMonths(h.quoteDate, Number(mo[1])) : '';
+    }
+  }
   return h;
+}
+
+// Finds 消費税 / 合計 values in rows below the line items (each row = array of cells).
+function scanTotals(rows) {
+  const out = {};
+  rows.forEach(r => {
+    const label = r.map(c => String(c).normalize('NFKC').replace(/\s/g, '')).join(' ');
+    const nums = r.map(c => (typeof c === 'number' ? c : /^[¥￥]?[\d,]+円?$/.test(String(c).trim()) ? num(c) : null)).filter(n => n !== null);
+    if (!nums.length) return;
+    const value = nums[nums.length - 1];
+    if (/消費税/.test(label) && out.tax === undefined) out.tax = value;
+    else if (/(総合計|合計|総額|御見積金額)/.test(label) && !/小計/.test(label) && out.docTotal === undefined) out.docTotal = value;
+  });
+  return out;
 }
 
 function extractFromExcel(buf) {
@@ -603,17 +881,21 @@ function extractFromExcel(buf) {
   if (col.qty === col.unitPrice) delete col.qty;
 
   const items = [];
-  for (let r = headerIdx + 1; r < rows.length; r++) {
+  let r = headerIdx + 1;
+  for (; r < rows.length; r++) {
     const row = rows[r];
     const name = String(row[col.name] == null ? '' : row[col.name]).trim();
-    if (STOP_ROW.test(name.replace(/\s/g, ''))) break;
+    if (STOP_ROW.test(name.replace(/\s/g, '')) || row.some(c => STOP_ROW.test(String(c).replace(/\s/g, '')))) break;
     if (!name) continue;
     const get = k => (col[k] == null ? '' : row[col[k]]);
     items.push({ name, spec: get('spec'), qty: get('qty'), unit: get('unit'), unitPrice: get('unitPrice'), amount: get('amount'), note: get('note') });
   }
-  const header = guessHeader(rows.slice(0, headerIdx).flat());
-  return { header, items, warn: !items.length,
-    message: `Excel シート「${esc(wb.SheetNames[0])}」の ${headerIdx + 1} 行目を見出しとして <b>${items.length} 行</b>を抽出しました。内容を確認してから登録してください。` };
+  const totals = scanTotals(rows.slice(r));
+  // Header fields may sit above the table or in a footer block (e.g. 納期 / 支払条件).
+  const header = guessHeader(rows.slice(0, headerIdx).flat().concat(rows.slice(r).flat()));
+  const found = HEADER_FIELDS.filter(f => header[f.key]).map(f => f.label);
+  return { header, items, ...totals, warn: !items.length,
+    message: `Excel シート「${esc(wb.SheetNames[0])}」から明細 <b>${items.length} 行</b>、ヘッダー <b>${found.length} 項目</b>（${esc(found.join('・') || 'なし')}）を抽出しました。内容を確認してから登録してください。` };
 }
 
 async function extractFromPdf(buf) {
@@ -642,7 +924,8 @@ async function extractFromPdf(buf) {
   // "品名 [仕様] 数量 [単位] 単価 金額" のような行を拾う簡易パーサー
   const LINE = /^(.+?)\s+([\d,.]+)\s*([^\d\s,.]{0,4})\s+[¥￥]?([\d,]+)\s+[¥￥]?([\d,]+)\s*(.*)$/;
   const items = [];
-  lines.map(l => l.normalize('NFKC')).forEach(l => {
+  const norm = lines.map(l => l.normalize('NFKC'));
+  norm.forEach(l => {
     const m = l.match(LINE);
     if (!m || STOP_ROW.test(m[1].replace(/\s/g, '')) || /品名|数量|単価/.test(l)) return;
     const [nameAndSpec, qty, unit, unitPrice, amount, note] = m.slice(1);
@@ -650,9 +933,13 @@ async function extractFromPdf(buf) {
     const name = parts.shift().replace(/^\d+\s+/, '');
     items.push({ name, spec: parts.join(' '), qty: num(qty), unit, unitPrice: num(unitPrice), amount: num(amount), note });
   });
-  return { header: guessHeader(lines), items, warn: !items.length,
+  const chunks = norm.flatMap(l => l.split(/\s{2,}/));
+  const header = guessHeader(chunks);
+  const totals = scanTotals(norm.filter(l => STOP_ROW.test(l.replace(/\s/g, ''))).map(l => l.split(/\s{2,}/)));
+  const found = HEADER_FIELDS.filter(f => header[f.key]).map(f => f.label);
+  return { header, items, ...totals, warn: !items.length,
     message: items.length
-      ? `PDF（${pdf.numPages} ページ）のテキストから <b>${items.length} 行</b>を抽出しました。レイアウトによっては崩れるので確認してください。`
+      ? `PDF（${pdf.numPages} ページ）のテキストから明細 <b>${items.length} 行</b>、ヘッダー <b>${found.length} 項目</b>（${esc(found.join('・') || 'なし')}）を抽出しました。レイアウトによっては崩れるので確認してください。`
       : `PDF のテキストは読めましたが、明細行を判別できませんでした（${lines.length} 行のテキスト）。手入力で補完してください。` };
 }
 
@@ -663,9 +950,10 @@ async function extractFromHandwriting(file) {
 }
 
 function mockOcr(kind) {
-  const today = new Date();
+  const today = isoDate(new Date());
   return {
-    header: { quoteDate: toIsoDate(today), memo: (kind === 'handwritten' ? '手書きメモ' : 'スキャンPDF') + 'から読み取り（OCRモック）' },
+    header: { vendor: '大和設備工業', vendorContact: '木村', subject: '給湯室 配管修理', quoteDate: today, validUntil: addDays(today, 30),
+      deliveryDate: '10月中', memo: (kind === 'handwritten' ? '手書きメモ' : 'スキャンPDF') + 'から読み取り（OCRモック）' },
     items: [
       { name: '塩ビ管', spec: 'VP50 4m', qty: 10, unit: '本', unitPrice: 2380, amount: 23800 },
       { name: 'エルボ', spec: 'DV50 90°', qty: 12, unit: '個', unitPrice: 310, amount: 3720, lowConf: true },
