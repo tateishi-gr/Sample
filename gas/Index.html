@@ -12,11 +12,41 @@
     --bg: #f5f6f8; --panel: #fff; --text: #1d2330; --muted: #6b7384; --line: #e2e5eb;
     --accent: #2f6fde; --accent-weak: #e8f0fd; --danger: #d64545; --danger-weak: #fdeaea; --warn-bg: #fff5d6; --mark: #ffe58a;
     --excel: #1f8a4c; --pdf: #c9392f; --hand: #8a5cd1; --manual: #6b7384;
+    --field: #fff; --subtle: #fafbfc; --hover: #f7faff; --on-accent: #fff; --scrim: rgba(20,25,35,.45);
+    --toast-bg: #1d2330; --toast-fg: #fff; --warn-fg: #9a6700;
+    --st1-fg: #2f6fde; --st1-bg: #e8f0fd; --st1-bd: #c4d7f8;
+    --st2-fg: #1f7a45; --st2-bg: #e5f5ec; --st2-bd: #b9e2ca;
+    --st3-fg: #6b7384; --st3-bg: #f1f2f4; --st3-bd: #dcdfe4;
+    --st4-fg: #9a6700; --st4-bg: #fff5d6; --st4-bd: #f0dc9c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #13161c; --panel: #1b1f27; --text: #e6e9ef; --muted: #99a1b1; --line: #2d3340;
+      --accent: #6b9cf0; --accent-weak: #1f2c45; --danger: #f07474; --danger-weak: #3a1f22; --warn-bg: #3a3017; --mark: #6b5a14;
+      --field: #151920; --subtle: #20252e; --hover: #222834; --on-accent: #0f1320; --scrim: rgba(0,0,0,.6);
+      --toast-bg: #e6e9ef; --toast-fg: #13161c; --warn-fg: #e8c35a;
+      --st1-fg: #8fb4f5; --st1-bg: #1f2c45; --st1-bd: #33466b;
+      --st2-fg: #7fd3a2; --st2-bg: #183326; --st2-bd: #2a5540;
+      --st3-fg: #a4abb8; --st3-bg: #262a33; --st3-bd: #3a404c;
+      --st4-fg: #e8c35a; --st4-bg: #3a3017; --st4-bd: #5c4c22;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #13161c; --panel: #1b1f27; --text: #e6e9ef; --muted: #99a1b1; --line: #2d3340;
+    --accent: #6b9cf0; --accent-weak: #1f2c45; --danger: #f07474; --danger-weak: #3a1f22; --warn-bg: #3a3017; --mark: #6b5a14;
+    --field: #151920; --subtle: #20252e; --hover: #222834; --on-accent: #0f1320; --scrim: rgba(0,0,0,.6);
+    --toast-bg: #e6e9ef; --toast-fg: #13161c; --warn-fg: #e8c35a;
+    --st1-fg: #8fb4f5; --st1-bg: #1f2c45; --st1-bd: #33466b;
+    --st2-fg: #7fd3a2; --st2-bg: #183326; --st2-bd: #2a5540;
+    --st3-fg: #a4abb8; --st3-bg: #262a33; --st3-bd: #3a404c;
+    --st4-fg: #e8c35a; --st4-bg: #3a3017; --st4-bd: #5c4c22;
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text);
     font: 14px/1.6 "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", Meiryo, sans-serif; }
-  header { background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 10; }
+  header { background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; }
   .bar { max-width: 1280px; margin: 0 auto; padding: 12px 16px 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; }
   h1 { font-size: 17px; margin: 0; }
   h2 { font-size: 15px; margin: 0 0 12px; }
@@ -29,12 +59,13 @@
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; margin-bottom: 16px; }
   .hidden { display: none !important; }
   label.f { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--muted); }
-  input, select, textarea { font: inherit; color: var(--text); padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: #fff; min-width: 0; }
+  input, select, textarea { font: inherit; color: var(--text); padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--field); min-width: 0; }
   input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent-weak); border-color: var(--accent); }
-  .btn { font: inherit; border: 1px solid var(--line); background: #fff; padding: 7px 14px; border-radius: 6px; cursor: pointer; }
-  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .btn { font: inherit; color: var(--text); border: 1px solid var(--line); background: var(--field); padding: 7px 14px; border-radius: 6px; cursor: pointer; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
   .btn.danger { color: var(--danger); }
   .btn.small { padding: 2px 8px; font-size: 12px; }
+  .btn:focus-visible, nav button:focus-visible, a.link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .btn:disabled { opacity: .5; cursor: default; }
   .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
   .search-box { display: flex; gap: 8px; }
@@ -47,25 +78,25 @@
   .table-wrap { overflow-x: auto; }
   table { border-collapse: collapse; width: 100%; font-size: 13px; }
   th, td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
-  th { background: #fafbfc; font-weight: 600; color: var(--muted); font-size: 12px; position: sticky; top: 0; }
+  th { background: var(--subtle); font-weight: 600; color: var(--muted); font-size: 12px; position: sticky; top: 0; }
   td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   td.wrap { white-space: normal; min-width: 160px; }
-  tbody tr:hover { background: #fafcff; }
-  mark { background: var(--mark); padding: 0 1px; border-radius: 2px; }
+  tbody tr:hover { background: var(--hover); }
+  mark { color: inherit; background: var(--mark); padding: 0 1px; border-radius: 2px; }
   a.link { color: var(--accent); cursor: pointer; text-decoration: none; }
   a.link:hover { text-decoration: underline; }
   .badge { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 10px; color: #fff; }
   .badge.excel { background: var(--excel); } .badge.pdf { background: var(--pdf); }
   .badge.handwritten { background: var(--hand); } .badge.manual { background: var(--manual); }
   .st { display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 10px; border: 1px solid; }
-  .st-検討中 { color: #2f6fde; background: #e8f0fd; border-color: #c4d7f8; }
-  .st-採用 { color: #1f7a45; background: #e5f5ec; border-color: #b9e2ca; }
-  .st-不採用 { color: #6b7384; background: #f1f2f4; border-color: #dcdfe4; }
-  .st-保留 { color: #9a6700; background: #fff5d6; border-color: #f0dc9c; }
+  .st-検討中 { color: var(--st1-fg); background: var(--st1-bg); border-color: var(--st1-bd); }
+  .st-採用 { color: var(--st2-fg); background: var(--st2-bg); border-color: var(--st2-bd); }
+  .st-不採用 { color: var(--st3-fg); background: var(--st3-bg); border-color: var(--st3-bd); }
+  .st-保留 { color: var(--st4-fg); background: var(--st4-bg); border-color: var(--st4-bd); }
   select.st { font-size: 12px; padding: 1px 4px; cursor: pointer; }
   .exp { font-size: 11px; padding: 0 6px; border-radius: 8px; margin-left: 4px; }
   .exp.expired { background: var(--danger-weak); color: var(--danger); }
-  .exp.soon { background: var(--warn-bg); color: #9a6700; }
+  .exp.soon { background: var(--warn-bg); color: var(--warn-fg); }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .chips button { font: inherit; font-size: 12px; cursor: pointer; }
   .chips button.on { outline: 2px solid currentColor; }
@@ -100,13 +131,14 @@
   .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--accent-weak); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -2px; margin-right: 6px; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  .modal-bg { position: fixed; inset: 0; background: rgba(20,25,35,.45); display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; z-index: 20; overflow-y: auto; }
+  .modal-bg { position: fixed; inset: 0; background: var(--scrim); display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; z-index: 20; overflow-y: auto; }
   .modal { background: var(--panel); border-radius: 10px; width: 100%; max-width: 960px; padding: 20px; }
   .modal h2 { margin: 0 0 4px; font-size: 17px; }
   .meta { color: var(--muted); font-size: 12px; display: flex; flex-wrap: wrap; gap: 4px 16px; margin-bottom: 12px; }
-  dl.hd { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px 16px; margin: 0 0 16px; padding: 12px; background: #fafbfc; border-radius: 8px; }
+  dl.hd { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px 16px; margin: 0 0 16px; padding: 12px; background: var(--subtle); border-radius: 8px; }
   dl.hd div { min-width: 0; } dl.hd dt { font-size: 11px; color: var(--muted); } dl.hd dd { margin: 0; word-break: break-all; }
-  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1d2330; color: #fff; padding: 10px 18px; border-radius: 8px; z-index: 30; }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--toast-bg); color: var(--toast-fg); padding: 10px 18px; border-radius: 8px; z-index: 30; max-width: calc(100% - 32px); }
+  .toast.error { background: var(--danger); color: #fff; }
 </style>
 </head>
 <body>
@@ -388,13 +420,16 @@ function expiryState(q) {
 }
 const expiryTag = q => ({ expired: '<span class="exp expired">期限切れ</span>', soon: '<span class="exp soon">期限間近</span>' }[expiryState(q)] || '');
 
-function toast(msg) {
+function toast(msg, isError) {
+  document.querySelectorAll('.toast').forEach(t => t.remove());
   const el = document.createElement('div');
-  el.className = 'toast'; el.textContent = msg;
+  el.className = 'toast' + (isError ? ' error' : ''); el.textContent = msg;
+  el.setAttribute('role', isError ? 'alert' : 'status');
   document.body.appendChild(el);
-  setTimeout(() => el.remove(), 2800);
+  setTimeout(() => el.remove(), isError ? 5000 : 2800);
 }
-function showError(e) { alert('エラー: ' + (e && e.message ? e.message : e)); }
+// In-page messages instead of alert(): some hosts (e.g. sandboxed previews) block native dialogs.
+function showError(e) { toast('エラー: ' + (e && e.message ? e.message : e), true); }
 
 // Highlights keyword terms inside already-escaped text (NFKC-insensitive for ASCII/kana width).
 function highlight(text, terms) {
@@ -587,8 +622,10 @@ async function openQuote(id) {
       // Re-fetch so a status changed in this dialog isn't overwritten by the stale copy.
       try { const fresh = await api('getQuote', id); closeModal(); startEdit(fresh.header, fresh.items); } catch (e) { showError(e); }
     };
+    // Two-step delete instead of confirm(), which sandboxed previews block.
     $('m-del').onclick = async () => {
-      if (!confirm('この見積と明細をスプレッドシートから削除します。よろしいですか？')) return;
+      const btn = $('m-del');
+      if (!btn.dataset.armed) { btn.dataset.armed = '1'; btn.textContent = '本当に削除する（もう一度押す）'; return; }
       try { await api('deleteQuote', id); closeModal(); toast('削除しました'); refreshAll(); } catch (e) { showError(e); }
     };
   } catch (e) { showError(e); }
@@ -641,7 +678,7 @@ function detectType(file) {
 
 async function handleFile(file) {
   const sourceType = detectType(file);
-  if (!sourceType) return alert('対応していない形式です（Excel / CSV / PDF / 画像）');
+  if (!sourceType) return toast('対応していない形式です（Excel / CSV / PDF / 画像）', true);
   const buf = await file.arrayBuffer();
   current = { mode: 'new', sourceType, file, base64: file.size <= 10 * 1024 * 1024 ? toBase64(buf) : null };
 
@@ -757,8 +794,8 @@ function recalc() {
 
 async function submitRegister() {
   const items = readItems();
-  if (!$('h-vendor').value.trim()) { $('h-vendor').focus(); return alert('取引先を入力してください'); }
-  if (!items.length) return alert('品名が入力された明細が 1 行もありません');
+  if (!$('h-vendor').value.trim()) { $('h-vendor').focus(); return toast('取引先を入力してください', true); }
+  if (!items.length) return toast('品名が入力された明細が 1 行もありません', true);
   const header = { sourceType: current.sourceType, fileName: current.file ? current.file.name : '', tax: String(currentTotals().tax) };
   HEADER_FIELDS.forEach(f => { header[f.key] = $('h-' + f.key).value.trim(); });
   const payload = {
