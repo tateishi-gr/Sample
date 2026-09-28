@@ -74,6 +74,14 @@ Google Apps Script（GAS）のウェブアプリとして動き、データは G
 `gas/Index.html` をブラウザで直接開くと、GAS がない環境ではメモリ上のサンプルデータで動きます（画面右上に「ローカルプレビュー」と表示されます）。
 登録した内容はリロードすると消えます。画面の確認用です。
 
+localhost で立ち上げる場合は、リポジトリのルートで次を実行して http://localhost:8080/Index.html を開きます。
+
+```sh
+python3 -m http.server 8080 --directory gas   # Windows は py -m http.server 8080 --directory gas
+```
+
+Excel / PDF の読み取りライブラリは cdnjs から読み込むので、インターネットにつながっている必要があります。
+
 ## 本番化に向けた次の一手
 
 - **OCR**: `Index.html` の `extractFromHandwriting` / `mockOcr` を、Cloud Vision / Document AI や LLM（画像から明細 JSON を返させる）を呼ぶサーバー関数に置き換える
