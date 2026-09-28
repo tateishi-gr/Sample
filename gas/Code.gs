@@ -52,7 +52,8 @@ const ITEM_COLUMNS = [
   ['note', '備考'],
 ];
 // Old header names from earlier versions, renamed by setup().
-const COLUMN_ALIASES = { '合計金額': '合計（税込）' };
+// The first version had no tax, so its 合計金額 is the pre-tax sum of the line items.
+const COLUMN_ALIASES = { '合計金額': '小計（税抜）' };
 
 // Header fields the user can edit from the UI.
 const EDITABLE_KEYS = ['status', 'quoteNo', 'quoteDate', 'validUntil', 'vendor', 'vendorContact', 'subject',
@@ -90,7 +91,24 @@ function setup() {
   ensureSheet_(ss, SHEET_ITEMS, ITEM_COLUMNS);
   if (ss.getSheetByName(SHEET_QUOTES).getLastRow() <= 1) {
     SAMPLE_QUOTES.forEach(q => registerQuote(q));
+  } else {
+    backfillQuotes_();
   }
+}
+
+/** Fills status / tax / total on rows created before those columns existed. */
+function backfillQuotes_() {
+  const t = openTable_(SHEET_QUOTES, QUOTE_COLUMNS);
+  readTable_(t).forEach(q => {
+    const raw = q._raw;
+    const set = (key, value) => t.sheet.getRange(q._row, t.index[key] + 1).setValue(value);
+    if (raw[t.index.status] === '') set('status', STATUSES[0]);
+    if (raw[t.index.total] === '') {
+      const tax = raw[t.index.tax] === '' ? Math.floor(q.subtotal * TAX_RATE) : q.tax;
+      if (raw[t.index.tax] === '') set('tax', tax);
+      set('total', q.subtotal + tax);
+    }
+  });
 }
 
 function ensureSheet_(ss, name, columns) {
@@ -168,7 +186,11 @@ function updateQuote(quoteId, payload) {
     const quotes = openTable_(SHEET_QUOTES, QUOTE_COLUMNS);
     const row = findRow_(quotes, quoteId);
     const header = Object.assign(built.header, { updatedAt: new Date() });
-    quotes.sheet.getRange(row._row, 1, 1, quotes.width).setValues([toRow_(quotes, header, row._raw)]);
+    // Keep formulas in columns this app doesn't own (user-added columns) instead of freezing their values.
+    const range = quotes.sheet.getRange(row._row, 1, 1, quotes.width);
+    const formulas = range.getFormulas()[0];
+    const base = row._raw.map((v, i) => formulas[i] || v);
+    range.setValues([toRow_(quotes, header, base)]);
     deleteRowsWhere_(openTable_(SHEET_ITEMS, ITEM_COLUMNS), 'quoteId', quoteId);
     appendItems_(quoteId, built.items);
     return { quoteId: quoteId, itemCount: built.items.length };

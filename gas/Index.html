@@ -583,7 +583,10 @@ async function openQuote(id) {
     </div>`;
     $('modal').classList.remove('hidden');
     $('m-close').onclick = closeModal;
-    $('m-edit').onclick = () => { closeModal(); startEdit(h, items); };
+    $('m-edit').onclick = async () => {
+      // Re-fetch so a status changed in this dialog isn't overwritten by the stale copy.
+      try { const fresh = await api('getQuote', id); closeModal(); startEdit(fresh.header, fresh.items); } catch (e) { showError(e); }
+    };
     $('m-del').onclick = async () => {
       if (!confirm('この見積と明細をスプレッドシートから削除します。よろしいですか？')) return;
       try { await api('deleteQuote', id); closeModal(); toast('削除しました'); refreshAll(); } catch (e) { showError(e); }
