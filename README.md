@@ -83,6 +83,17 @@ python3 -m http.server 8080 --bind 127.0.0.1 --directory gas   # Windows（Power
 `--bind 127.0.0.1` で自分の PC からだけ開けるようにしています。止めるときは Ctrl + C。
 Excel / PDF の読み取りライブラリは cdnjs から読み込むので、インターネットにつながっている必要があります。
 
+## 従業員向け取扱説明書
+
+[docs/見積明細検索_取扱説明書.pdf](docs/見積明細検索_取扱説明書.pdf)（A4・12 ページ）。画面の使い方を、番号付きのスクリーンショットで説明しています。
+
+原稿は `docs/manual/manual.html`、スクリーンショットは `docs/manual/build.js` がローカルプレビューのサンプルデータから撮り直します。
+画面を変えたら、次のコマンドで PDF を作り直してください（Playwright の Chromium と Noto Sans CJK JP フォントが必要）。
+
+```sh
+node docs/manual/build.js
+```
+
 ## 本番化に向けた次の一手
 
 - **OCR**: `Index.html` の `extractFromHandwriting` / `mockOcr` を、Cloud Vision / Document AI や LLM（画像から明細 JSON を返させる）を呼ぶサーバー関数に置き換える
