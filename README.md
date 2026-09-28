@@ -77,9 +77,10 @@ Google Apps Script（GAS）のウェブアプリとして動き、データは G
 localhost で立ち上げる場合は、リポジトリのルートで次を実行して http://localhost:8080/Index.html を開きます。
 
 ```sh
-python3 -m http.server 8080 --directory gas   # Windows は py -m http.server 8080 --directory gas
+python3 -m http.server 8080 --bind 127.0.0.1 --directory gas   # Windows（PowerShell）は py -m http.server 8080 --bind 127.0.0.1 --directory gas
 ```
 
+`--bind 127.0.0.1` で自分の PC からだけ開けるようにしています。止めるときは Ctrl + C。
 Excel / PDF の読み取りライブラリは cdnjs から読み込むので、インターネットにつながっている必要があります。
 
 ## 本番化に向けた次の一手
