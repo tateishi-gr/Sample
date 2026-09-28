@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>見積明細検索</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  :root {
+    --bg: #f5f6f8; --panel: #fff; --text: #1d2330; --muted: #6b7384; --line: #e2e5eb;
+    --accent: #2f6fde; --accent-weak: #e8f0fd; --danger: #d64545; --warn-bg: #fff5d6; --mark: #ffe58a;
+    --excel: #1f8a4c; --pdf: #c9392f; --hand: #8a5cd1; --manual: #6b7384;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.6 "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", Meiryo, sans-serif; }
+  header { background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 10; }
+  .bar { max-width: 1200px; margin: 0 auto; padding: 12px 16px 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; }
+  h1 { font-size: 17px; margin: 0; }
+  .stats { color: var(--muted); font-size: 12px; margin-left: auto; }
+  .mode { font-size: 11px; background: var(--warn-bg); padding: 2px 8px; border-radius: 10px; margin-left: 8px; }
+  nav { max-width: 1200px; margin: 0 auto; padding: 0 16px; display: flex; gap: 4px; }
+  nav button { border: 0; background: none; padding: 10px 14px; font: inherit; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; }
+  nav button.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  main { max-width: 1200px; margin: 0 auto; padding: 16px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+  .hidden { display: none !important; }
+  label.f { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--muted); }
+  input, select, textarea { font: inherit; color: var(--text); padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: #fff; min-width: 0; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent-weak); border-color: var(--accent); }
+  .btn { font: inherit; border: 1px solid var(--line); background: #fff; padding: 7px 14px; border-radius: 6px; cursor: pointer; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .btn.danger { color: var(--danger); }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+  .search-box { display: flex; gap: 8px; }
+  .search-box input { flex: 1; font-size: 16px; padding: 10px 12px; }
+  .filters { margin-top: 12px; }
+  .filters .range { display: flex; gap: 4px; align-items: center; }
+  .filters .range input { width: 130px; }
+  .summary { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 13px; margin-bottom: 8px; }
+  .summary b { font-size: 15px; }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+  th { background: #fafbfc; font-weight: 600; color: var(--muted); font-size: 12px; position: sticky; top: 0; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.wrap { white-space: normal; min-width: 160px; }
+  tbody tr:hover { background: #fafcff; }
+  mark { background: var(--mark); padding: 0 1px; border-radius: 2px; }
+  a.link { color: var(--accent); cursor: pointer; text-decoration: none; }
+  a.link:hover { text-decoration: underline; }
+  .badge { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 10px; color: #fff; }
+  .badge.excel { background: var(--excel); } .badge.pdf { background: var(--pdf); }
+  .badge.handwritten { background: var(--hand); } .badge.manual { background: var(--manual); }
+  .empty { color: var(--muted); text-align: center; padding: 32px; }
+
+  .drop { border: 2px dashed var(--line); border-radius: 8px; padding: 32px 16px; text-align: center; cursor: pointer; transition: .15s; }
+  .drop.over, .drop:hover { border-color: var(--accent); background: var(--accent-weak); }
+  .drop .types { display: flex; justify-content: center; gap: 8px; margin-top: 8px; }
+  .reg-grid { display: grid; grid-template-columns: 280px 1fr; gap: 16px; }
+  @media (max-width: 800px) { .reg-grid { grid-template-columns: 1fr; } }
+  .preview { border: 1px solid var(--line); border-radius: 6px; padding: 8px; font-size: 12px; color: var(--muted); word-break: break-all; }
+  .preview img { max-width: 100%; display: block; margin-top: 6px; border-radius: 4px; }
+  .notice { font-size: 12px; padding: 8px 10px; border-radius: 6px; background: var(--accent-weak); margin-bottom: 12px; }
+  .notice.warn { background: var(--warn-bg); }
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 12px; }
+  .items input { width: 100%; padding: 4px 6px; border-color: transparent; background: transparent; }
+  .items input:hover { border-color: var(--line); }
+  .items input.num { text-align: right; }
+  .items td { padding: 2px 4px; }
+  .items .lowconf input { background: var(--warn-bg); }
+  .items .x { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 16px; }
+  .reg-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; flex-wrap: wrap; gap: 8px; }
+  .total { font-size: 15px; } .total b { font-size: 18px; }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--accent-weak); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -2px; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .modal-bg { position: fixed; inset: 0; background: rgba(20,25,35,.45); display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; z-index: 20; overflow-y: auto; }
+  .modal { background: var(--panel); border-radius: 10px; width: 100%; max-width: 900px; padding: 20px; }
+  .modal h2 { margin: 0 0 4px; font-size: 17px; }
+  .meta { color: var(--muted); font-size: 12px; display: flex; flex-wrap: wrap; gap: 4px 16px; margin-bottom: 12px; }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1d2330; color: #fff; padding: 10px 18px; border-radius: 8px; z-index: 30; }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <h1>見積明細検索</h1>
+    <div class="stats"><span id="stats">読み込み中…</span><span id="mode" class="mode hidden">ローカルプレビュー（サンプルデータ）</span></div>
+  </div>
+  <nav>
+    <button data-tab="search" class="active">明細検索</button>
+    <button data-tab="register">見積登録</button>
+    <button data-tab="list">見積一覧</button>
+  </nav>
+</header>
+
+<main>
+  <!-- 明細検索 -->
+  <section id="tab-search">
+    <div class="panel">
+      <form id="search-form">
+        <div class="search-box">
+          <input id="q-keyword" type="search" placeholder="品名・型番・取引先・件名で検索（スペース区切りで AND）  例: LANケーブル cat6">
+          <button class="btn primary" type="submit">検索</button>
+        </div>
+        <div class="row filters">
+          <label class="f">取引先<select id="q-vendor"><option value="">すべて</option></select></label>
+          <label class="f">見積日<span class="range"><input id="q-from" type="date">〜<input id="q-to" type="date"></span></label>
+          <label class="f">単価<span class="range"><input id="q-pmin" type="number" placeholder="下限">〜<input id="q-pmax" type="number" placeholder="上限"></span></label>
+          <label class="f">取込元<select id="q-source"><option value="">すべて</option><option value="excel">Excel</option><option value="pdf">PDF</option><option value="handwritten">手書き</option><option value="manual">手入力</option></select></label>
+          <button class="btn" type="button" id="q-clear">クリア</button>
+        </div>
+      </form>
+    </div>
+    <div class="panel">
+      <div class="summary" id="search-summary"></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>見積日</th><th>取引先</th><th>品名</th><th>仕様・型番</th><th class="num">数量</th><th>単位</th><th class="num">単価</th><th class="num">金額</th><th>取込元</th><th>件名</th></tr></thead>
+          <tbody id="search-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 見積登録 -->
+  <section id="tab-register" class="hidden">
+    <div class="panel" id="reg-step1">
+      <div class="drop" id="drop">
+        <div style="font-size:15px;font-weight:600">見積書ファイルをドロップ、またはクリックして選択</div>
+        <div class="types"><span class="badge excel">Excel / CSV</span><span class="badge pdf">PDF</span><span class="badge handwritten">手書きメモ（画像）</span></div>
+        <input type="file" id="file" class="hidden" accept=".xlsx,.xls,.csv,.pdf,image/*">
+      </div>
+      <div style="text-align:center;margin-top:12px"><button class="btn" id="manual-btn">ファイルなしで手入力する</button></div>
+    </div>
+
+    <div class="panel hidden" id="reg-step2">
+      <div class="reg-grid">
+        <div>
+          <div class="preview" id="preview"></div>
+        </div>
+        <div>
+          <div class="notice" id="extract-notice"></div>
+          <div class="form-grid">
+            <label class="f">取引先 *<input id="r-vendor" list="vendor-list" required></label>
+            <label class="f">見積日<input id="r-date" type="date"></label>
+            <label class="f">件名<input id="r-subject"></label>
+            <label class="f">メモ<input id="r-memo"></label>
+          </div>
+          <datalist id="vendor-list"></datalist>
+          <div class="table-wrap">
+            <table class="items">
+              <thead><tr><th>#</th><th>品名 *</th><th>仕様・型番</th><th class="num">数量</th><th>単位</th><th class="num">単価</th><th class="num">金額</th><th>備考</th><th></th></tr></thead>
+              <tbody id="items-body"></tbody>
+            </table>
+          </div>
+          <div class="reg-foot">
+            <button class="btn" id="add-row">＋ 行を追加</button>
+            <div class="total">合計 <b id="r-total">0</b> 円</div>
+          </div>
+          <div class="reg-foot">
+            <button class="btn" id="reg-cancel">やり直す</button>
+            <button class="btn primary" id="reg-submit">スプレッドシートに登録</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 見積一覧 -->
+  <section id="tab-list" class="hidden">
+    <div class="panel">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>見積日</th><th>取引先</th><th>件名</th><th class="num">合計金額</th><th>取込元</th><th>ファイル名</th><th>登録日時</th></tr></thead>
+          <tbody id="list-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="modal" class="modal-bg hidden"></div>
+
+<script>
+// ===========================================================================
+// API layer: google.script.run on Apps Script, in-memory mock elsewhere.
+// ===========================================================================
+const IS_GAS = typeof google !== 'undefined' && google.script && google.script.run;
+
+function api(fn, ...args) {
+  if (!IS_GAS) return MockApi.call(fn, args);
+  return new Promise((resolve, reject) => {
+    google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args);
+  });
+}
+
+// Local preview backend. Mirrors the server functions in Code.gs with a small sample.
+const MockApi = (() => {
+  const norm = s => String(s).normalize('NFKC').toLowerCase();
+  const quotes = [];
+  const items = [];
+  let seq = 0;
+  function register(payload, registeredAt) {
+    const quoteId = 'Q-LOCAL-' + String(++seq).padStart(3, '0');
+    const rows = payload.items.filter(it => String(it.name || '').trim()).map((it, i) => {
+      const qty = num(it.qty), unitPrice = num(it.unitPrice);
+      const amount = it.amount !== '' && it.amount != null ? num(it.amount) : qty * unitPrice;
+      return { itemId: quoteId + '-' + (i + 1), quoteId, lineNo: i + 1, name: it.name, spec: it.spec || '', qty, unit: it.unit || '', unitPrice, amount, note: it.note || '' };
+    });
+    if (!String(payload.header.vendor || '').trim()) throw new Error('取引先は必須です。');
+    if (!rows.length) throw new Error('明細が 1 行もありません。');
+    const h = payload.header;
+    quotes.push({ quoteId, registeredAt: registeredAt || new Date().toISOString().slice(0, 16).replace('T', ' '),
+      quoteDate: h.quoteDate || '', vendor: h.vendor.trim(), subject: h.subject || '', total: rows.reduce((s, r) => s + r.amount, 0),
+      sourceType: h.sourceType || 'manual', fileName: h.fileName || (payload.file && payload.file.name) || '', fileUrl: '', memo: h.memo || '' });
+    items.push(...rows);
+    return { quoteId, itemCount: rows.length };
+  }
+  const fns = {
+    getInitData: () => ({ vendors: [...new Set(quotes.map(q => q.vendor))].sort(), quoteCount: quotes.length, itemCount: items.length }),
+    registerQuote: p => register(p),
+    listQuotes: () => [...quotes].sort((a, b) => b.registeredAt.localeCompare(a.registeredAt)),
+    getQuote: id => ({ header: quotes.find(q => q.quoteId === id), items: items.filter(i => i.quoteId === id) }),
+    deleteQuote: id => {
+      quotes.splice(quotes.findIndex(q => q.quoteId === id), 1);
+      for (let i = items.length - 1; i >= 0; i--) if (items[i].quoteId === id) items.splice(i, 1);
+      return true;
+    },
+    searchItems: q => {
+      const byId = Object.fromEntries(quotes.map(h => [h.quoteId, h]));
+      const terms = norm(q.keyword || '').split(/\s+/).filter(Boolean);
+      const out = items.map(it => ({ ...it, ...pick(byId[it.quoteId]) })).filter(r =>
+        (!q.vendor || r.vendor === q.vendor) && (!q.sourceType || r.sourceType === q.sourceType) &&
+        (!q.dateFrom || (r.quoteDate && r.quoteDate >= q.dateFrom)) && (!q.dateTo || (r.quoteDate && r.quoteDate <= q.dateTo)) &&
+        (q.priceMin === '' || r.unitPrice >= Number(q.priceMin)) && (q.priceMax === '' || r.unitPrice <= Number(q.priceMax)) &&
+        terms.every(t => norm([r.name, r.spec, r.note, r.vendor, r.subject].join(' ')).includes(t)));
+      out.sort((a, b) => (b.quoteDate || '').localeCompare(a.quoteDate || ''));
+      return { total: out.length, items: out };
+    },
+  };
+  const pick = h => ({ vendor: h.vendor, subject: h.subject, quoteDate: h.quoteDate, sourceType: h.sourceType });
+  const S = (quoteDate, vendor, subject, sourceType, fileName, rows) => ({ header: { quoteDate, vendor, subject, sourceType, fileName },
+    items: rows.map(([name, spec, qty, unit, unitPrice]) => ({ name, spec, qty, unit, unitPrice })) });
+  [
+    S('2026-07-03', '東和電機株式会社', '本社3F 照明LED化工事', 'excel', '見積_東和電機_20260703.xlsx', [
+      ['LEDベースライト', 'LDL40 昼白色 4000lm', 48, '台', 12800], ['既設照明器具撤去', '40W×2灯', 48, '台', 1500],
+      ['配線工事', 'VVF1.6-3C', 1, '式', 85000], ['産廃処分費', '', 1, '式', 32000]]),
+    S('2026-07-18', 'ネットワークス山田', '会議室 LAN 増設', 'pdf', 'Q-2026-0718.pdf', [
+      ['LANケーブル', 'Cat6A 305m巻', 2, '巻', 38000], ['スイッチングハブ', '24ポート PoE+ GS1900-24HP', 1, '台', 64500],
+      ['情報コンセント', 'Cat6A 2口', 12, '個', 2400], ['敷設・結線作業', '', 2, '人日', 45000]]),
+    S('2026-08-05', '東和電機株式会社', '倉庫 照明・コンセント増設', 'pdf', '見積書_倉庫.pdf', [
+      ['LED高天井照明', '150W 水銀灯400W相当', 16, '台', 29800], ['コンセント増設', '2口 接地付', 10, '箇所', 8500], ['高所作業車', '10m 1日', 2, '日', 38000]]),
+    S('2026-08-22', '丸山建材', '事務所 内装補修', 'handwritten', 'memo_0822.jpg', [
+      ['石膏ボード', '12.5mm 910×1820', 20, '枚', 980], ['クロス張替', '量産品', 45, 'm2', 1200], ['タイルカーペット', '500角 グレー', 60, '枚', 750]]),
+    S('2026-09-10', 'ネットワークス山田', '無線LAN 更新', 'excel', '無線LAN更新_見積.xlsx', [
+      ['無線アクセスポイント', 'Wi-Fi 6E WAX630E', 6, '台', 52000], ['LANケーブル', 'Cat6 20m', 6, '本', 2200], ['設定作業', 'SSID/VLAN設計含む', 1, '式', 60000]]),
+  ].forEach((p, i) => register(p, p.header.quoteDate + ' 1' + i + ':00'));
+  return {
+    call: (fn, args) => new Promise((resolve, reject) => setTimeout(() => {
+      try { resolve(JSON.parse(JSON.stringify(fns[fn](...args)))); } catch (e) { reject(e); }
+    }, 150)),
+  };
+})();
+
+// ===========================================================================
+// Utilities
+// ===========================================================================
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const yen = n => (Number(n) || 0).toLocaleString('ja-JP');
+function num(v) {
+  const n = Number(String(v == null ? '' : v).normalize('NFKC').replace(/[,¥￥円\s]/g, ''));
+  return isNaN(n) ? 0 : n;
+}
+const SOURCE_LABEL = { excel: 'Excel', pdf: 'PDF', handwritten: '手書き', manual: '手入力' };
+const badge = t => `<span class="badge ${esc(t)}">${esc(SOURCE_LABEL[t] || t)}</span>`;
+function toast(msg) {
+  const el = document.createElement('div');
+  el.className = 'toast'; el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2800);
+}
+function showError(e) { alert('エラー: ' + (e && e.message ? e.message : e)); }
+
+// Highlights keyword terms inside already-escaped text (NFKC-insensitive for ASCII/kana width).
+function highlight(text, terms) {
+  let html = esc(text);
+  if (!terms.length) return html;
+  const src = String(text == null ? '' : text);
+  const normSrc = src.normalize('NFKC').toLowerCase();
+  if (normSrc.length !== src.length) return html; // width-changing normalization: skip highlight
+  const ranges = [];
+  terms.forEach(t => { let i = 0; while ((i = normSrc.indexOf(t, i)) >= 0) { ranges.push([i, i + t.length]); i += t.length; } });
+  if (!ranges.length) return html;
+  ranges.sort((a, b) => a[0] - b[0]);
+  let out = '', pos = 0;
+  ranges.forEach(([s, e]) => { if (s < pos) return; out += esc(src.slice(pos, s)) + '<mark>' + esc(src.slice(s, e)) + '</mark>'; pos = e; });
+  return out + esc(src.slice(pos));
+}
+
+// ===========================================================================
+// Tabs & init
+// ===========================================================================
+document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+function showTab(tab) {
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  ['search', 'register', 'list'].forEach(t => $('tab-' + t).classList.toggle('hidden', t !== tab));
+  if (tab === 'list') loadList();
+}
+
+async function refreshInit() {
+  const d = await api('getInitData');
+  $('stats').textContent = `見積 ${d.quoteCount} 件 / 明細 ${d.itemCount} 行`;
+  const cur = $('q-vendor').value;
+  $('q-vendor').innerHTML = '<option value="">すべて</option>' + d.vendors.map(v => `<option>${esc(v)}</option>`).join('');
+  $('q-vendor').value = d.vendors.includes(cur) ? cur : '';
+  $('vendor-list').innerHTML = d.vendors.map(v => `<option value="${esc(v)}">`).join('');
+}
+
+// ===========================================================================
+// Search
+// ===========================================================================
+let searchSeq = 0;
+async function runSearch() {
+  const q = {
+    keyword: $('q-keyword').value.trim(), vendor: $('q-vendor').value, dateFrom: $('q-from').value, dateTo: $('q-to').value,
+    priceMin: $('q-pmin').value, priceMax: $('q-pmax').value, sourceType: $('q-source').value,
+  };
+  const mySeq = ++searchSeq;
+  $('search-summary').innerHTML = '<span><span class="spinner"></span>検索中…</span>';
+  try {
+    const res = await api('searchItems', q);
+    if (mySeq !== searchSeq) return;
+    renderSearch(res, q);
+  } catch (e) { showError(e); }
+}
+
+function renderSearch(res, q) {
+  const terms = q.keyword.normalize('NFKC').toLowerCase().split(/\s+/).filter(Boolean);
+  const prices = res.items.map(r => r.unitPrice).filter(p => p > 0);
+  let summary = `<span>該当 <b>${res.total}</b> 件${res.total > res.items.length ? `（先頭 ${res.items.length} 件を表示）` : ''}</span>`;
+  if (prices.length && (terms.length || q.vendor)) {
+    const avg = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
+    summary += `<span>単価 最安 <b>¥${yen(Math.min(...prices))}</b></span><span>平均 <b>¥${yen(avg)}</b></span><span>最高 <b>¥${yen(Math.max(...prices))}</b></span>`;
+  }
+  $('search-summary').innerHTML = summary;
+  $('search-body').innerHTML = res.items.length ? res.items.map(r => `<tr>
+      <td>${esc(r.quoteDate)}</td><td>${highlight(r.vendor, terms)}</td>
+      <td class="wrap">${highlight(r.name, terms)}</td><td class="wrap">${highlight(r.spec, terms)}</td>
+      <td class="num">${yen(r.qty)}</td><td>${esc(r.unit)}</td><td class="num">${yen(r.unitPrice)}</td><td class="num">${yen(r.amount)}</td>
+      <td>${badge(r.sourceType)}</td><td><a class="link" data-quote="${esc(r.quoteId)}">${highlight(r.subject || '(件名なし)', terms)}</a></td>
+    </tr>`).join('') : '<tr><td colspan="10" class="empty">該当する明細はありません</td></tr>';
+}
+
+$('search-form').addEventListener('submit', e => { e.preventDefault(); runSearch(); });
+['q-vendor', 'q-from', 'q-to', 'q-source'].forEach(id => $(id).addEventListener('change', runSearch));
+$('q-clear').addEventListener('click', () => { $('search-form').reset(); runSearch(); });
+let keyTimer;
+$('q-keyword').addEventListener('input', () => { clearTimeout(keyTimer); keyTimer = setTimeout(runSearch, 300); });
+document.addEventListener('click', e => { const a = e.target.closest('[data-quote]'); if (a) openQuote(a.dataset.quote); });
+
+// ===========================================================================
+// Quote list & detail
+// ===========================================================================
+async function loadList() {
+  $('list-body').innerHTML = '<tr><td colspan="7" class="empty"><span class="spinner"></span>読み込み中…</td></tr>';
+  try {
+    const list = await api('listQuotes');
+    $('list-body').innerHTML = list.length ? list.map(q => `<tr>
+        <td>${esc(q.quoteDate)}</td><td>${esc(q.vendor)}</td><td><a class="link" data-quote="${esc(q.quoteId)}">${esc(q.subject || '(件名なし)')}</a></td>
+        <td class="num">${yen(q.total)}</td><td>${badge(q.sourceType)}</td><td>${esc(q.fileName)}</td><td>${esc(q.registeredAt)}</td>
+      </tr>`).join('') : '<tr><td colspan="7" class="empty">登録された見積はありません</td></tr>';
+  } catch (e) { showError(e); }
+}
+
+async function openQuote(id) {
+  try {
+    const { header: h, items } = await api('getQuote', id);
+    $('modal').innerHTML = `<div class="modal">
+      <h2>${esc(h.subject || '(件名なし)')}</h2>
+      <div class="meta"><span>${esc(h.vendor)}</span><span>見積日 ${esc(h.quoteDate || '-')}</span><span>${badge(h.sourceType)} ${
+        h.fileUrl ? `<a class="link" href="${esc(h.fileUrl)}" target="_blank">${esc(h.fileName)}</a>` : esc(h.fileName)}</span>
+        <span>登録 ${esc(h.registeredAt)}</span><span>ID ${esc(h.quoteId)}</span></div>
+      ${h.memo ? `<div class="notice">${esc(h.memo)}</div>` : ''}
+      <div class="table-wrap"><table>
+        <thead><tr><th>#</th><th>品名</th><th>仕様・型番</th><th class="num">数量</th><th>単位</th><th class="num">単価</th><th class="num">金額</th><th>備考</th></tr></thead>
+        <tbody>${items.map(r => `<tr><td>${r.lineNo}</td><td class="wrap">${esc(r.name)}</td><td class="wrap">${esc(r.spec)}</td>
+          <td class="num">${yen(r.qty)}</td><td>${esc(r.unit)}</td><td class="num">${yen(r.unitPrice)}</td><td class="num">${yen(r.amount)}</td><td>${esc(r.note)}</td></tr>`).join('')}</tbody>
+        <tfoot><tr><td colspan="6" class="num"><b>合計</b></td><td class="num"><b>${yen(h.total)}</b></td><td></td></tr></tfoot>
+      </table></div>
+      <div class="reg-foot"><button class="btn danger" id="m-del">この見積を削除</button><button class="btn" id="m-close">閉じる</button></div>
+    </div>`;
+    $('modal').classList.remove('hidden');
+    $('m-close').onclick = closeModal;
+    $('m-del').onclick = async () => {
+      if (!confirm('この見積と明細をスプレッドシートから削除します。よろしいですか？')) return;
+      try { await api('deleteQuote', id); closeModal(); toast('削除しました'); refreshAll(); } catch (e) { showError(e); }
+    };
+  } catch (e) { showError(e); }
+}
+function closeModal() { $('modal').classList.add('hidden'); $('modal').innerHTML = ''; }
+$('modal').addEventListener('click', e => { if (e.target === $('modal')) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+function refreshAll() {
+  refreshInit();
+  runSearch();
+  if (!$('tab-list').classList.contains('hidden')) loadList();
+}
+
+// ===========================================================================
+// Register: file -> extraction -> review -> save
+// ===========================================================================
+let current = null; // { sourceType, file, base64 }
+
+const drop = $('drop');
+drop.addEventListener('click', () => $('file').click());
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+$('file').addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); e.target.value = ''; });
+$('manual-btn').addEventListener('click', () => {
+  current = { sourceType: 'manual', file: null };
+  openReview({ header: {}, items: [{}, {}, {}] }, '手入力モードです。明細を入力して登録してください。', false);
+  $('preview').innerHTML = '手入力（元ファイルなし）';
+});
+$('reg-cancel').addEventListener('click', resetRegister);
+$('add-row').addEventListener('click', () => { addItemRow({}); });
+$('reg-submit').addEventListener('click', submitRegister);
+
+function detectType(file) {
+  const name = file.name.toLowerCase();
+  if (/\.(xlsx|xls|csv)$/.test(name)) return 'excel';
+  if (/\.pdf$/.test(name) || file.type === 'application/pdf') return 'pdf';
+  if (file.type.startsWith('image/')) return 'handwritten';
+  return null;
+}
+
+async function handleFile(file) {
+  const sourceType = detectType(file);
+  if (!sourceType) return alert('対応していない形式です（Excel / CSV / PDF / 画像）');
+  const buf = await file.arrayBuffer();
+  current = { sourceType, file, base64: file.size <= 10 * 1024 * 1024 ? toBase64(buf) : null };
+
+  $('reg-step1').classList.add('hidden');
+  $('reg-step2').classList.remove('hidden');
+  $('preview').innerHTML = `${badge(sourceType)} ${esc(file.name)}<br>${(file.size / 1024).toFixed(1)} KB` +
+    (sourceType === 'handwritten' ? `<img src="${URL.createObjectURL(file)}" alt="">` : '');
+  $('extract-notice').className = 'notice';
+  $('extract-notice').innerHTML = '<span class="spinner"></span>明細を抽出しています…';
+  $('items-body').innerHTML = '';
+
+  try {
+    let result;
+    if (sourceType === 'excel') result = extractFromExcel(buf);
+    else if (sourceType === 'pdf') result = await extractFromPdf(buf);
+    else result = await extractFromHandwriting(file);
+    openReview(result, result.message, result.warn);
+  } catch (e) {
+    console.error(e);
+    openReview({ header: {}, items: [{}, {}, {}] }, '抽出に失敗しました（' + esc(e.message) + '）。手入力で補完してください。', true);
+  }
+}
+
+function toBase64(buf) {
+  let bin = '';
+  const bytes = new Uint8Array(buf);
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
+function openReview(result, message, warn) {
+  $('reg-step1').classList.add('hidden');
+  $('reg-step2').classList.remove('hidden');
+  $('extract-notice').className = 'notice' + (warn ? ' warn' : '');
+  $('extract-notice').innerHTML = message;
+  const h = result.header || {};
+  $('r-vendor').value = h.vendor || '';
+  $('r-date').value = h.quoteDate || '';
+  $('r-subject').value = h.subject || '';
+  $('r-memo').value = h.memo || '';
+  $('items-body').innerHTML = '';
+  (result.items.length ? result.items : [{}]).forEach(addItemRow);
+  recalc();
+}
+
+const ITEM_FIELDS = [
+  ['name', ''], ['spec', ''], ['qty', 'num'], ['unit', ''], ['unitPrice', 'num'], ['amount', 'num'], ['note', ''],
+];
+function addItemRow(it) {
+  const tr = document.createElement('tr');
+  if (it.lowConf) tr.className = 'lowconf';
+  tr.innerHTML = `<td class="ln"></td>` + ITEM_FIELDS.map(([k, cls]) =>
+    `<td><input data-k="${k}" class="${cls}" value="${esc(it[k] == null ? '' : it[k])}"${k === 'name' ? ' style="min-width:160px"' : ''}></td>`).join('') +
+    `<td><button class="x" title="行を削除">×</button></td>`;
+  tr.querySelector('.x').onclick = () => { tr.remove(); recalc(); };
+  tr.addEventListener('input', e => {
+    tr.classList.remove('lowconf');
+    const k = e.target.dataset.k;
+    if (k === 'qty' || k === 'unitPrice') {
+      const qty = tr.querySelector('[data-k=qty]').value, price = tr.querySelector('[data-k=unitPrice]').value;
+      if (qty !== '' && price !== '') tr.querySelector('[data-k=amount]').value = num(qty) * num(price);
+    }
+    recalc();
+  });
+  $('items-body').appendChild(tr);
+  recalc();
+}
+
+function readItems() {
+  return [...$('items-body').children].map(tr => {
+    const it = {};
+    tr.querySelectorAll('input').forEach(i => { it[i.dataset.k] = i.value.trim(); });
+    return it;
+  }).filter(it => it.name);
+}
+
+function recalc() {
+  [...$('items-body').children].forEach((tr, i) => { tr.querySelector('.ln').textContent = i + 1; });
+  const total = readItems().reduce((s, it) => s + (it.amount !== '' ? num(it.amount) : num(it.qty) * num(it.unitPrice)), 0);
+  $('r-total').textContent = yen(total);
+}
+
+async function submitRegister() {
+  const items = readItems();
+  if (!$('r-vendor').value.trim()) { $('r-vendor').focus(); return alert('取引先を入力してください'); }
+  if (!items.length) return alert('品名が入力された明細が 1 行もありません');
+  const payload = {
+    header: { vendor: $('r-vendor').value.trim(), quoteDate: $('r-date').value, subject: $('r-subject').value.trim(),
+      memo: $('r-memo').value.trim(), sourceType: current.sourceType, fileName: current.file ? current.file.name : '' },
+    items,
+    file: current.file && current.base64 ? { name: current.file.name, mimeType: current.file.type || 'application/octet-stream', base64: current.base64 } : null,
+  };
+  const btn = $('reg-submit');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>登録中…';
+  try {
+    const res = await api('registerQuote', payload);
+    toast(`登録しました（${res.itemCount} 行）`);
+    resetRegister();
+    refreshAll();
+  } catch (e) { showError(e); }
+  finally { btn.disabled = false; btn.textContent = 'スプレッドシートに登録'; }
+}
+
+function resetRegister() {
+  current = null;
+  $('reg-step2').classList.add('hidden');
+  $('reg-step1').classList.remove('hidden');
+}
+
+// ---------------------------------------------------------------------------
+// Extractors. Each returns { header, items, message, warn }.
+// ---------------------------------------------------------------------------
+const COLS = {
+  name: /品名|品目|名称|摘要|内容|項目/, spec: /仕様|型番|規格|型式/, qty: /数量|数/, unit: /単位/,
+  unitPrice: /単価/, amount: /金額|価格|小計/, note: /備考/,
+};
+const STOP_ROW = /^(小計|合計|総合計|消費税|値引|税込|税抜)/;
+const DATE_RE = /(20\d{2}|令和\s*\d+)\s*[年\/.\-]\s*(\d{1,2})\s*[月\/.\-]\s*(\d{1,2})/;
+
+function toIsoDate(v) {
+  if (v instanceof Date && !isNaN(v)) return v.getFullYear() + '-' + String(v.getMonth() + 1).padStart(2, '0') + '-' + String(v.getDate()).padStart(2, '0');
+  const m = String(v || '').normalize('NFKC').match(DATE_RE);
+  if (!m) return '';
+  const y = m[1].startsWith('令和') ? 2018 + Number(m[1].replace(/\D/g, '')) : Number(m[1]);
+  return y + '-' + m[2].padStart(2, '0') + '-' + m[3].padStart(2, '0');
+}
+
+// Guesses header info (date / subject / issuing company) from free-text cells or lines.
+function guessHeader(cells) {
+  const h = {};
+  cells.forEach((c, i) => {
+    const s = String(c == null ? '' : c).normalize('NFKC').trim();
+    if (!s) return;
+    if (!h.quoteDate && (c instanceof Date || DATE_RE.test(s))) h.quoteDate = toIsoDate(c);
+    const subj = s.match(/^(件名|工事名|案件名)\s*[:：]?\s*(.*)$/);
+    if (!h.subject && subj) h.subject = subj[2] || String(cells[i + 1] || '').trim();
+    if (!h.vendor && /(株式会社|有限会社|\(株\)|\(有\)|商店|工業|電機|建材)/.test(s) && !/御中|様/.test(s) && s.length < 40) h.vendor = s;
+  });
+  return h;
+}
+
+function extractFromExcel(buf) {
+  const wb = XLSX.read(buf, { type: 'array', cellDates: true });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' });
+
+  const headerIdx = rows.findIndex(r => r.some(c => COLS.name.test(c)) && r.some(c => /数量|単価|金額/.test(c)));
+  if (headerIdx < 0) {
+    return { header: guessHeader(rows.flat()), items: [{}, {}, {}], warn: true,
+      message: `シート「${esc(wb.SheetNames[0])}」で明細の見出し行（品名・数量・単価など）が見つかりませんでした。手入力で補完してください。` };
+  }
+  const col = {};
+  rows[headerIdx].forEach((c, i) => {
+    const s = String(c).replace(/\s/g, '');
+    Object.keys(COLS).forEach(k => { if (col[k] == null && COLS[k].test(s)) col[k] = i; });
+  });
+  if (col.qty === col.unitPrice) delete col.qty;
+
+  const items = [];
+  for (let r = headerIdx + 1; r < rows.length; r++) {
+    const row = rows[r];
+    const name = String(row[col.name] == null ? '' : row[col.name]).trim();
+    if (STOP_ROW.test(name.replace(/\s/g, ''))) break;
+    if (!name) continue;
+    const get = k => (col[k] == null ? '' : row[col[k]]);
+    items.push({ name, spec: get('spec'), qty: get('qty'), unit: get('unit'), unitPrice: get('unitPrice'), amount: get('amount'), note: get('note') });
+  }
+  const header = guessHeader(rows.slice(0, headerIdx).flat());
+  return { header, items, warn: !items.length,
+    message: `Excel シート「${esc(wb.SheetNames[0])}」の ${headerIdx + 1} 行目を見出しとして <b>${items.length} 行</b>を抽出しました。内容を確認してから登録してください。` };
+}
+
+async function extractFromPdf(buf) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise;
+  const lines = [];
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const content = await (await pdf.getPage(p)).getTextContent();
+    const byY = new Map();
+    content.items.forEach(t => {
+      if (!t.str.trim()) return;
+      const y = Math.round(t.transform[5] / 3);
+      if (!byY.has(y)) byY.set(y, []);
+      byY.get(y).push(t);
+    });
+    [...byY.entries()].sort((a, b) => b[0] - a[0]).forEach(([, ts]) =>
+      lines.push(ts.sort((a, b) => a.transform[4] - b.transform[4]).map(t => t.str.trim()).join('  ')));
+  }
+
+  if (!lines.join('').trim()) {
+    const mock = mockOcr('pdf');
+    mock.message = 'PDF にテキストがありません（スキャン PDF）。<b>OCR はモック</b>のため、サンプルの抽出結果を表示しています。' + mock.message;
+    return mock;
+  }
+
+  // "品名 [仕様] 数量 [単位] 単価 金額" のような行を拾う簡易パーサー
+  const LINE = /^(.+?)\s+([\d,.]+)\s*([^\d\s,.]{0,4})\s+[¥￥]?([\d,]+)\s+[¥￥]?([\d,]+)\s*(.*)$/;
+  const items = [];
+  lines.map(l => l.normalize('NFKC')).forEach(l => {
+    const m = l.match(LINE);
+    if (!m || STOP_ROW.test(m[1].replace(/\s/g, '')) || /品名|数量|単価/.test(l)) return;
+    const [nameAndSpec, qty, unit, unitPrice, amount, note] = m.slice(1);
+    const parts = nameAndSpec.split(/\s{2,}/);
+    const name = parts.shift().replace(/^\d+\s+/, '');
+    items.push({ name, spec: parts.join(' '), qty: num(qty), unit, unitPrice: num(unitPrice), amount: num(amount), note });
+  });
+  return { header: guessHeader(lines), items, warn: !items.length,
+    message: items.length
+      ? `PDF（${pdf.numPages} ページ）のテキストから <b>${items.length} 行</b>を抽出しました。レイアウトによっては崩れるので確認してください。`
+      : `PDF のテキストは読めましたが、明細行を判別できませんでした（${lines.length} 行のテキスト）。手入力で補完してください。` };
+}
+
+// Handwritten memo: OCR is mocked. Swap this for Cloud Vision / Document AI / LLM later.
+async function extractFromHandwriting(file) {
+  await new Promise(r => setTimeout(r, 1200));
+  return mockOcr('handwritten');
+}
+
+function mockOcr(kind) {
+  const today = new Date();
+  return {
+    header: { quoteDate: toIsoDate(today), memo: (kind === 'handwritten' ? '手書きメモ' : 'スキャンPDF') + 'から読み取り（OCRモック）' },
+    items: [
+      { name: '塩ビ管', spec: 'VP50 4m', qty: 10, unit: '本', unitPrice: 2380, amount: 23800 },
+      { name: 'エルボ', spec: 'DV50 90°', qty: 12, unit: '個', unitPrice: 310, amount: 3720, lowConf: true },
+      { name: '配管工事', spec: '', qty: 1, unit: '式', unitPrice: 45000, amount: 45000 },
+      { name: '出張費', spec: '', qty: 1, unit: '式', unitPrice: 8000, amount: 8000, lowConf: true },
+    ],
+    warn: true,
+    message: '<b>OCR はモック</b>です（固定のサンプル結果）。黄色の行は読み取り信頼度が低い想定なので確認してください。',
+  };
+}
+
+// ---------------------------------------------------------------------------
+if (!IS_GAS) $('mode').classList.remove('hidden');
+refreshInit().then(runSearch).catch(showError);
+</script>
+</body>
+</html>
